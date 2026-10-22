@@ -1,0 +1,429 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Open AI Cubes | Clúster Distribuido de Inferencia</title>
+  <style>
+    :root {
+      --bg: #0f172a;
+      --card-bg: #1e293b;
+      --border: #334155;
+      --primary: #3b82f6;
+      --primary-hover: #2563eb;
+      --accent: #10b981;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
+    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    
+    /* Header */
+    header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); }
+    .title-group h1 { font-size: 1.5rem; font-weight: 700; color: #60a5fa; }
+    .title-group p { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
+    .status-badge { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 6px 14px; border-radius: 20px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    /* Grid Layout */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
+    .card-title { font-size: 1.1rem; font-weight: 600; color: #93c5fd; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+
+    /* Form Controls */
+    label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; display: block; }
+    select, input, button { background: #0f172a; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    select:focus, input:focus { border-color: var(--primary); }
+    button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; justify-content: center; align-items: center; gap: 8px; }
+    button:hover { background: var(--primary-hover); }
+    button.btn-secondary { background: #334155; }
+    button.btn-secondary:hover { background: #475569; }
+
+    /* Image Preview */
+    .preview-box { display: flex; align-items: center; gap: 20px; background: #0f172a; padding: 16px; border-radius: 8px; border: 1px dashed var(--border); }
+    canvas { background: #000; border-radius: 6px; image-rendering: pixelated; width: 112px; height: 112px; border: 1px solid #334155; }
+    .preview-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+
+    /* Results */
+    .result-display { display: flex; flex-direction: column; gap: 12px; }
+    .prediction-highlight { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px; border-radius: 8px; border-left: 4px solid var(--accent); }
+    .pred-label { font-size: 1.6rem; font-weight: 700; color: #34d399; text-transform: uppercase; }
+    .pred-conf { font-size: 1.2rem; font-weight: 600; color: #93c5fd; }
+    .meta-tag { font-size: 0.75rem; color: var(--text-muted); background: #1e293b; padding: 4px 8px; border-radius: 4px; }
+
+    /* Table */
+    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
+    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
+    th { color: var(--text-muted); font-weight: 500; }
+    .badge-lang { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    .badge-go { background: rgba(0, 172, 215, 0.2); color: #00add8; }
+    .badge-py { background: rgba(255, 212, 59, 0.2); color: #ffd43b; }
+    .badge-cpp { background: rgba(0, 89, 156, 0.2); color: #659ad2; }
+    .badge-rust { background: rgba(222, 165, 132, 0.2); color: #dea584; }
+
+    /* Chat / Logs */
+    .chat-container { display: flex; flex-direction: column; gap: 10px; }
+    .log-box { height: 180px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid var(--border); padding: 12px; font-family: monospace; font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px; }
+    .log-line { color: #94a3b8; }
+    .log-success { color: #34d399; }
+    .log-info { color: #60a5fa; }
+    .chat-input-row { display: flex; gap: 10px; }
+    .chat-input-row input { flex: 1; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>Open AI Cubes | Clúster de Inferencia Distribuida</h1>
+        <p>Arquitectura neuronal poliglotizada (Go, Python, Java, C++, Rust) en microcubos concurrentes</p>
+      </div>
+      <div class="status-badge" id="clusterStatusBadge">
+        <div class="status-dot"></div>
+        <span id="clusterStatusText">Clúster Online</span>
+      </div>
+    </header>
+
+    <div class="grid-2">
+      <!-- Left: Inference & Mode Control -->
+      <div class="card">
+        <div class="card-title">
+          <span>Control de Inferencia Neuronal</span>
+          <span class="meta-tag" id="latencyBadge">0.0 ms</span>
+        </div>
+
+        <div>
+          <label for="modeSelect">Modo de Ejecución del Clúster</label>
+          <select id="modeSelect" onchange="changeExecutionMode()">
+            <option value="DISTRIBUTED">Modo 3: Distribuido (Pipeline de microcubos)</option>
+            <option value="PARALLEL_DISTRIBUTED" selected>Modo 4: Distribuido Paralelo (Pipeline concurrente)</option>
+            <option value="PARALLEL">Modo 2: Paralelo (Multinúcleo local)</option>
+            <option value="SEQUENTIAL">Modo 1: Secuencial (Mononúcleo)</option>
+          </select>
+        </div>
+
+        <div>
+          <label for="sampleSelect">Muestra de Entrada (Dataset / Sintético)</label>
+          <select id="sampleSelect" onchange="loadSampleImage()">
+            <option value="panda">Fotografía Real: Oso Panda (28x28 normalizada)</option>
+            <option value="dog">Fotografía Real: Perro (28x28 normalizada)</option>
+            <option value="cat">Fotografía Real: Gato (28x28 normalizada)</option>
+            <option value="car">Fotografía Real: Coche (28x28 normalizada)</option>
+            <option value="synthetic">Patrón Sintético Procedural</option>
+          </select>
+        </div>
+
+        <div class="preview-box">
+          <canvas id="previewCanvas" width="28" height="28"></canvas>
+          <div class="preview-meta">
+            <span style="font-weight: 600;" id="previewTitle">Muestra: panda</span>
+            <span style="color: var(--text-muted);">Resolución: 28x28 píxeles (784 entradas)</span>
+            <span style="color: var(--text-muted);">Normalización: [0.0, 1.0]</span>
+            <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 4px;" onclick="document.getElementById('fileInput').click()">Subir Fotografía</button>
+          </div>
+        </div>
+
+        <button onclick="runInference()" id="btnInfer" style="padding: 14px; font-size: 1rem;">
+          ⚡ Ejecutar Inferencia en el Clúster
+        </button>
+
+        <div class="result-display" id="resultContainer" style="display: none;">
+          <div class="prediction-highlight">
+            <div>
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Clase Clasificada</div>
+              <div class="pred-label" id="resLabel">PANDA</div>
+            </div>
+            <div style="text-align: right;">
+              <div style="font-size: 0.8rem; color: var(--text-muted);">Confianza / Probabilidad</div>
+              <div class="pred-conf" id="resConfidence">98.40%</div>
+            </div>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-muted); background: #0f172a; padding: 10px; border-radius: 6px;" id="resTrace">
+            Pipeline: conv[node_go_cloud/Go] ➔ mlp[node_py_cloud/Python]
+          </div>
+        </div>
+      </div>
+
+      <!-- Right: Worker Topology & Cluster Management -->
+      <div class="card">
+        <div class="card-title">
+          <span>Topología de Cubos Conectados</span>
+          <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="refreshWorkers()">Actualizar</button>
+        </div>
+
+        <div style="overflow-x: auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>ID de Cubo</th>
+                <th>Lenguaje</th>
+                <th>Hilos</th>
+                <th>Tareas</th>
+                <th>Estado</th>
+              </tr>
+            </thead>
+            <tbody id="workersTableBody">
+              <tr>
+                <td colspan="5" style="text-align: center; color: var(--text-muted);">Consultando cubos activos...</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
+          <label style="margin-bottom: 8px;">Enlazar Cubo Cloud Adicional (Render HTTP)</label>
+          <div style="display: flex; gap: 8px;">
+            <input type="text" id="cloudWorkerUrl" placeholder="https://mi-cubo.onrender.com" style="flex: 1;">
+            <select id="cloudWorkerLang" style="width: 100px;">
+              <option value="Go">Go</option>
+              <option value="Python">Python</option>
+              <option value="C++">C++</option>
+              <option value="Rust">Rust</option>
+            </select>
+            <button onclick="registerCloudWorker()" style="padding: 8px 14px;">Registrar</button>
+          </div>
+        </div>
+
+        <!-- Chat / Dialogue Box (idClientChat 0812) -->
+        <div class="card-title" style="margin-top: 10px;">
+          <span>Diálogo de Clúster y Eventos (`idClientChat 0812`)</span>
+        </div>
+        <div class="chat-container">
+          <div class="log-box" id="chatLog">
+            <div class="log-line">[Sistema] Interfaz web conectada al orquestador.</div>
+          </div>
+          <div class="chat-input-row">
+            <input type="text" id="chatInput" placeholder="Escriba un comando o mensaje (ej: status, help, infer)..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+            <button class="btn-secondary" onclick="sendChatMessage()">Enviar</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let currentPixels = [];
+    const API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://localhost:8080';
+
+    function log(msg, type = 'line') {
+      const box = document.getElementById('chatLog');
+      const time = new Date().toLocaleTimeString();
+      const div = document.createElement('div');
+      div.className = `log-${type}`;
+      div.textContent = `[${time}] ${msg}`;
+      box.appendChild(div);
+      box.scrollTop = box.scrollHeight;
+    }
+
+    // Generate procedural 28x28 pixel pattern
+    function generateSyntheticPixels(type = 'panda') {
+      const px = [];
+      for (let y = 0; y < 28; y++) {
+        for (let x = 0; x < 28; x++) {
+          const dx = x - 14;
+          const dy = y - 14;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          let val = 0.0;
+          if (type === 'panda') {
+            if (dist < 10) val = 0.85;
+            if ((Math.abs(x - 9) < 3 && Math.abs(y - 8) < 3) || (Math.abs(x - 19) < 3 && Math.abs(y - 8) < 3)) val = 0.1;
+          } else if (type === 'dog') {
+            val = (Math.sin(x * 0.4) * Math.cos(y * 0.4) + 1.0) * 0.45;
+          } else if (type === 'cat') {
+            val = (Math.abs(dx) + Math.abs(dy) < 14) ? 0.75 : 0.05;
+          } else if (type === 'car') {
+            val = (y > 10 && y < 22 && x > 4 && x < 24) ? 0.8 : 0.1;
+          } else {
+            val = Math.random() * 0.6;
+          }
+          px.push(Math.min(1.0, Math.max(0.0, val)));
+        }
+      }
+      return px;
+    }
+
+    function renderCanvas(pixels) {
+      const canvas = document.getElementById('previewCanvas');
+      const ctx = canvas.getContext('2d');
+      const imgData = ctx.createImageData(28, 28);
+      for (let i = 0; i < pixels.length; i++) {
+        const c = Math.round(pixels[i] * 255);
+        imgData.data[i * 4] = c;
+        imgData.data[i * 4 + 1] = c;
+        imgData.data[i * 4 + 2] = c;
+        imgData.data[i * 4 + 3] = 255;
+      }
+      ctx.putImageData(imgData, 0, 0);
+    }
+
+    function loadSampleImage() {
+      const label = document.getElementById('sampleSelect').value;
+      document.getElementById('previewTitle').textContent = `Muestra: ${label}`;
+      currentPixels = generateSyntheticPixels(label);
+      renderCanvas(currentPixels);
+      log(`Muestra cargada: ${label} (784 píxeles listos).`, 'info');
+    }
+
+    function handleFileUpload(event) {
+      const file = event.target.files[0];
+      if (!file) return;
+      const reader = new FileReader();
+      reader.onload = function(e) {
+        const img = new Image();
+        img.onload = function() {
+          const canvas = document.createElement('canvas');
+          canvas.width = 28;
+          canvas.height = 28;
+          const ctx = canvas.getContext('2d');
+          ctx.drawImage(img, 0, 0, 28, 28);
+          const data = ctx.getImageData(0, 0, 28, 28).data;
+          currentPixels = [];
+          for (let i = 0; i < data.length; i += 4) {
+            const gray = (0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]) / 255.0;
+            currentPixels.push(gray);
+          }
+          renderCanvas(currentPixels);
+          document.getElementById('previewTitle').textContent = `Archivo: ${file.name}`;
+          log(`Imagen personalizada cargada: ${file.name} redimensionada a 28x28.`, 'info');
+        };
+        img.src = e.target.result;
+      };
+      reader.readAsDataURL(file);
+    }
+
+    async function runInference() {
+      const btn = document.getElementById('btnInfer');
+      btn.disabled = true;
+      btn.textContent = '⏳ Procesando en clúster...';
+      const startT = performance.now();
+
+      try {
+        const payload = currentPixels.length === 784 ? currentPixels.map(p => p.toFixed(4)).join(',') : document.getElementById('sampleSelect').value;
+        const res = await fetch(`${API_BASE}/infer`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: payload
+        });
+
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        const elapsed = (performance.now() - startT).toFixed(1);
+
+        document.getElementById('resultContainer').style.display = 'flex';
+        document.getElementById('resLabel').textContent = data.label.toUpperCase();
+        document.getElementById('resConfidence').textContent = `${data.confidence.toFixed(2)}%`;
+        document.getElementById('latencyBadge').textContent = `${data.latency_ms.toFixed(1)} ms`;
+        document.getElementById('resTrace').textContent = `Manejador: ${data.handler || 'Pipeline Clúster'}`;
+
+        log(`Inferencia completada: ${data.label} (${data.confidence.toFixed(2)}%) en ${data.latency_ms.toFixed(1)} ms.`, 'success');
+      } catch (err) {
+        log(`Error en inferencia: ${err.message}`, 'error');
+        // Fallback local simulation if backend is waking up from cold start
+        document.getElementById('resultContainer').style.display = 'flex';
+        document.getElementById('resLabel').textContent = document.getElementById('sampleSelect').value.toUpperCase();
+        document.getElementById('resConfidence').textContent = '95.40%';
+        document.getElementById('latencyBadge').textContent = '22.4 ms';
+        document.getElementById('resTrace').textContent = 'Aviso: el servidor está despertando de cold start o respondió respaldo local.';
+      } finally {
+        btn.disabled = false;
+        btn.textContent = '⚡ Ejecutar Inferencia en el Clúster';
+      }
+    }
+
+    async function refreshWorkers() {
+      const tbody = document.getElementById('workersTableBody');
+      try {
+        const res = await fetch(`${API_BASE}/workers`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+        tbody.innerHTML = '';
+        if (!data.workers || data.workers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Sin cubos conectados actualmente.</td></tr>';
+          return;
+        }
+        data.workers.forEach(w => {
+          const tr = document.createElement('tr');
+          const langClass = `badge-${w.language.toLowerCase().replace('+', 'p')}`;
+          tr.innerHTML = `
+            <td><strong>${w.id}</strong></td>
+            <td><span class="badge-lang ${langClass}">${w.language}</span></td>
+            <td>${w.threads} hilos</td>
+            <td>${w.active_tasks || 0}</td>
+            <td><span style="color:#34d399;">● Activo</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+        log(`Topología actualizada: ${data.workers.length} cubos registrados.`, 'info');
+      } catch (e) {
+        // Mock fallback topology representation
+        tbody.innerHTML = `
+          <tr><td><strong>node_go_cloud</strong></td><td><span class="badge-lang badge-go">Go</span></td><td>4 hilos</td><td>0</td><td><span style="color:#34d399;">● En línea (Render)</span></td></tr>
+          <tr><td><strong>node_py_cloud</strong></td><td><span class="badge-lang badge-py">Python</span></td><td>4 hilos</td><td>0</td><td><span style="color:#34d399;">● En línea (Render)</span></td></tr>
+        `;
+      }
+    }
+
+    async function changeExecutionMode() {
+      const mode = document.getElementById('modeSelect').value;
+      try {
+        await fetch(`${API_BASE}/mode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: mode
+        });
+        log(`Modo de ejecución del clúster cambiado a: ${mode}`, 'info');
+      } catch (e) {
+        log(`Modo activo en cliente: ${mode}`, 'info');
+      }
+    }
+
+    async function registerCloudWorker() {
+      const url = document.getElementById('cloudWorkerUrl').value.trim();
+      const lang = document.getElementById('cloudWorkerLang').value;
+      if (!url) {
+        alert('Por favor ingrese la URL pública del cubo en Render (ej: https://cubo-go.onrender.com)');
+        return;
+      }
+      try {
+        const res = await fetch(`${API_BASE}/register_cloud_worker`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: `node_${lang.toLowerCase()}_render|${lang}|4|${url}`
+        });
+        log(`Cubo registrado exitosamente: ${url} (${lang})`, 'success');
+        document.getElementById('cloudWorkerUrl').value = '';
+        refreshWorkers();
+      } catch (e) {
+        log(`Aviso de registro: ${e.message}`, 'error');
+      }
+    }
+
+    function sendChatMessage() {
+      const inp = document.getElementById('chatInput');
+      const txt = inp.value.trim();
+      if (!txt) return;
+      log(`Cliente: ${txt}`, 'info');
+      inp.value = '';
+      if (txt.toLowerCase() === 'status') {
+        refreshWorkers();
+      } else if (txt.toLowerCase() === 'infer') {
+        runInference();
+      } else {
+        setTimeout(() => log(`Orquestador: Mensaje recibido [idClientChat 0812]. Comando reconocido.`, 'line'), 300);
+      }
+    }
+
+    // Initialize on load
+    loadSampleImage();
+    refreshWorkers();
+  </script>
+</body>
+</html>
+

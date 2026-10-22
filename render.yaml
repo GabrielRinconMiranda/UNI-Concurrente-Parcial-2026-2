@@ -1,17 +1,55 @@
 services:
+  # 1. Servidor Backend Central (Java Orchestrator + Dashboard Web Integrado)
   - type: web
-    name: open-ai-cubes-go-worker
+    name: open-ai-cubes-backend
+    runtime: docker
+    plan: free
+    dockerfilePath: Dockerfile.server
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: 8080
+
+  # 2. Cubo de Cómputo Go (Host Nube 1)
+  - type: web
+    name: open-ai-cubes-go-worker-1
     runtime: go
     plan: free
     rootDir: go_worker_cube
     buildCommand: go build -o worker_cube worker_cube.go micro_chunks.go
     startCommand: ./worker_cube --http
 
+  # 3. Cubo de Cómputo Python (Host Nube 2)
   - type: web
-    name: open-ai-cubes-python-worker
+    name: open-ai-cubes-python-worker-1
     runtime: python
     plan: free
     rootDir: python_worker_cube
-    buildCommand: echo "Python worker ready (zero third-party dependencies)"
+    buildCommand: echo "Python worker ready"
     startCommand: python worker_cube.py --http
 
+  # 4. Cubo de Cómputo Go Adicional (Host Nube 3)
+  - type: web
+    name: open-ai-cubes-go-worker-2
+    runtime: go
+    plan: free
+    rootDir: go_worker_cube
+    buildCommand: go build -o worker_cube worker_cube.go micro_chunks.go
+    startCommand: ./worker_cube --http
+
+  # 5. Cubo de Cómputo Python Adicional (Host Nube 4)
+  - type: web
+    name: open-ai-cubes-python-worker-2
+    runtime: python
+    plan: free
+    rootDir: python_worker_cube
+    buildCommand: echo "Python worker ready"
+    startCommand: python worker_cube.py --http
+
+  # 6. Frontend Web Estático (Host Nube 5 - CDN Global, nunca duerme)
+  - type: static
+    name: open-ai-cubes-frontend
+    plan: free
+    rootDir: web
+    buildCommand: echo "Frontend static ready"
+    staticPublishPath: .

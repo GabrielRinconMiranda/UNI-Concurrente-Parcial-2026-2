@@ -322,9 +322,28 @@ public class ServerOrchestrator {
             httpServer.createContext("/status", this::handleHttpHealth);
             httpServer.createContext("/workers", this::handleHttpWorkers);
             httpServer.createContext("/infer", this::handleHttpInfer);
+            httpServer.createContext("/mode", this::handleHttpMode);
+            httpServer.createContext("/register_cloud_worker", this::handleHttpRegisterCloudWorker);
+            httpServer.createContext("/", this::handleHttpRoot);
             httpServer.setExecutor(localThreadPool);
             httpServer.start();
             System.out.println("[Server] HTTP REST API listener online: http://0.0.0.0:" + httpPort);
+
+            // Auto-register cloud workers from environment variable (e.g. Render URLs)
+            String cloudWorkersEnv = System.getenv("CLOUD_WORKERS");
+            if (cloudWorkersEnv != null && !cloudWorkersEnv.trim().isEmpty()) {
+                String[] urls = cloudWorkersEnv.split(",");
+                for (int i = 0; i < urls.length; i++) {
+                    String u = urls[i].trim();
+                    if (!u.isEmpty()) {
+                        String lang = u.toLowerCase().contains("go") ? "Go" : (u.toLowerCase().contains("py") ? "Python" : "CloudNode");
+                        String id = "node_" + lang.toLowerCase() + "_render_" + (i + 1);
+                        WorkerNodeSession ws = new WorkerNodeSession(id, lang, 4, "CONV,MLP", u);
+                        registry.register(ws);
+                        System.out.println("[Server] Registered Cloud HTTP Worker from ENV: " + id + " -> " + u);
+                    }
+                }
+            }
         } catch (Exception e) {
             System.out.println("[Server] HTTP listener notice: " + e.getMessage());
         }
@@ -575,6 +594,97 @@ public class ServerOrchestrator {
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
         exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.sendResponseHeaders(200, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+        }
+    }
+
+    private void handleHttpRoot(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+
+        File webFile = new File("web/index.html");
+        if (!webFile.exists()) webFile = new File("../web/index.html");
+        byte[] bytes;
+        if (webFile.exists()) {
+            bytes = java.nio.file.Files.readAllBytes(webFile.toPath());
+        } else {
+            String fallback = "<html><body style='font-family:sans-serif;background:#0f172a;color:#fff;padding:40px;'>"
+                    + "<h1>Open AI Cubes Orchestrator</h1><p>Online. API endpoints: /health, /workers, /infer, /status</p></body></html>";
+            bytes = fallback.getBytes(StandardCharsets.UTF_8);
+        }
+        exchange.getResponseHeaders().set("Content-Type", "text/html; charset=utf-8");
+        exchange.sendResponseHeaders(200, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+        }
+    }
+
+    private void handleHttpMode(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+        if ("POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            String modeStr;
+            try (InputStream is = exchange.getRequestBody()) {
+                modeStr = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+            }
+            try {
+                ExecutionMode m = ExecutionMode.valueOf(modeStr.toUpperCase());
+                setExecutionMode(m);
+            } catch (Exception ignored) {}
+        }
+        String json = "{\"status\":\"ok\",\"mode\":\"" + currentMode.name() + "\",\"description\":\"" + currentMode.getDescription() + "\"}\n";
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
+        exchange.sendResponseHeaders(200, bytes.length);
+        try (OutputStream os = exchange.getResponseBody()) {
+            os.write(bytes);
+        }
+    }
+
+    private void handleHttpRegisterCloudWorker(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+        if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(405, -1);
+            return;
+        }
+        String body;
+        try (InputStream is = exchange.getRequestBody()) {
+            body = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+        }
+        String[] parts = body.split("\\|");
+        String id = parts.length > 0 ? parts[0].trim() : "node_cloud_" + System.currentTimeMillis();
+        String lang = parts.length > 1 ? parts[1].trim() : "Cloud";
+        int threads = 4;
+        if (parts.length > 2) {
+            try { threads = Integer.parseInt(parts[2].trim()); } catch (Exception ignored) {}
+        }
+        String url = parts.length > 3 ? parts[3].trim() : (parts.length == 1 ? parts[0].trim() : "");
+        if (url.startsWith("http")) {
+            WorkerNodeSession ws = new WorkerNodeSession(id, lang, threads, "CONV,MLP", url);
+            registry.register(ws);
+            System.out.println("[Server] Manually registered Cloud Worker: " + id + " (" + lang + ") -> " + url);
+        }
+        String json = "{\"status\":\"ok\",\"registered_id\":\"" + id + "\"}\n";
+        byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+        exchange.getResponseHeaders().set("Content-Type", "application/json");
         exchange.sendResponseHeaders(200, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
             os.write(bytes);
