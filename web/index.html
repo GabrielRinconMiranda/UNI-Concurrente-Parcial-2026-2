@@ -1,9 +1,9 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Open AI Cubes | Clúster Distribuido de Inferencia</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Open AI Cubes | Distributed Neural Inference Client</title>
   <style>
     :root {
       --bg: #0f172a;
@@ -18,55 +18,198 @@
       --warning: #f59e0b;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-    body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 20px; }
-    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 20px; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 16px; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 1200px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; width: 100%; }
     
     /* Header */
-    header { display: flex; justify-content: space-between; align-items: center; padding: 16px 24px; background: var(--card-bg); border-radius: 12px; border: 1px solid var(--border); }
-    .title-group h1 { font-size: 1.5rem; font-weight: 700; color: #60a5fa; }
-    .title-group p { font-size: 0.85rem; color: var(--text-muted); margin-top: 4px; }
-    .status-badge { display: flex; align-items: center; gap: 8px; font-size: 0.85rem; padding: 6px 14px; border-radius: 20px; background: rgba(16, 185, 129, 0.15); color: #34d399; border: 1px solid rgba(16, 185, 129, 0.3); }
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .title-group h1 { font-size: 1.4rem; font-weight: 700; color: #60a5fa; }
+    .title-group p { font-size: 0.85rem; color: var(--text-muted); margin-top: 3px; }
+    
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .session-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.8rem;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(59, 130, 246, 0.15);
+      color: #93c5fd;
+      border: 1px solid rgba(59, 130, 246, 0.3);
+      font-weight: 600;
+      white-space: nowrap;
+    }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      padding: 5px 12px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+      white-space: nowrap;
+    }
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
-    /* API Endpoint Config Bar */
-    .config-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; gap: 14px; font-size: 0.85rem; }
+    .btn-admin {
+      background: #334155;
+      color: #f8fafc;
+      padding: 6px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: background 0.2s;
+      border: 1px solid var(--border);
+      white-space: nowrap;
+    }
+    .btn-admin:hover { background: #475569; }
+
+    /* Server Config Bar */
+    .config-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 10px;
+      padding: 12px 18px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      font-size: 0.85rem;
+      flex-wrap: wrap;
+    }
     .config-bar span { font-weight: 600; color: #93c5fd; white-space: nowrap; }
-    .config-bar input { flex: 1; background: #0f172a; border: 1px solid var(--border); color: #f8fafc; padding: 8px 12px; border-radius: 6px; font-family: monospace; }
+    .config-bar input {
+      flex: 1;
+      min-width: 220px;
+      background: #0f172a;
+      border: 1px solid var(--border);
+      color: #f8fafc;
+      padding: 8px 12px;
+      border-radius: 6px;
+      font-family: monospace;
+      font-size: 0.85rem;
+    }
 
     /* Grid Layout */
-    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
     @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
 
-    .card { background: var(--card-bg); border: 1px solid var(--border); border-radius: 12px; padding: 20px; display: flex; flex-direction: column; gap: 16px; }
-    .card-title { font-size: 1.1rem; font-weight: 600; color: #93c5fd; border-bottom: 1px solid var(--border); padding-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+      width: 100%;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #93c5fd;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
 
-    /* Form Controls */
-    label { font-size: 0.85rem; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; display: block; }
-    select, input, button { background: #0f172a; color: var(--text); border: 1px solid var(--border); border-radius: 8px; padding: 10px 14px; font-size: 0.9rem; outline: none; transition: border-color 0.2s; }
+    /* Controls */
+    label { font-size: 0.82rem; font-weight: 500; color: var(--text-muted); margin-bottom: 4px; display: block; }
+    select, input, button {
+      background: #0f172a;
+      color: var(--text);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 14px;
+      font-size: 0.9rem;
+      outline: none;
+      transition: border-color 0.2s;
+      width: 100%;
+    }
     select:focus, input:focus { border-color: var(--primary); }
-    button { background: var(--primary); color: white; border: none; font-weight: 600; cursor: pointer; transition: background 0.2s; display: inline-flex; justify-content: center; align-items: center; gap: 8px; }
+    button {
+      background: var(--primary);
+      color: white;
+      border: none;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+      display: inline-flex;
+      justify-content: center;
+      align-items: center;
+      gap: 8px;
+    }
     button:hover { background: var(--primary-hover); }
     button.btn-secondary { background: #334155; }
     button.btn-secondary:hover { background: #475569; }
 
-    /* Image Preview (Real Photographic Dataset) */
-    .preview-box { display: flex; align-items: center; gap: 20px; background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
-    .preview-img { width: 160px; height: 160px; object-fit: contain; border-radius: 8px; border: 1px solid #334155; background: #000; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
-    .preview-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; flex: 1; }
+    /* Image Preview */
+    .preview-box {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      background: #0f172a;
+      padding: 14px;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      width: 100%;
+    }
+    .preview-img {
+      width: 150px;
+      height: 150px;
+      min-width: 150px;
+      object-fit: contain;
+      border-radius: 8px;
+      border: 1px solid #334155;
+      background: #000;
+    }
+    .preview-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.82rem; flex: 1; min-width: 0; word-break: break-word; }
 
-    /* Results */
-    .result-display { display: flex; flex-direction: column; gap: 12px; }
-    .prediction-highlight { display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 16px; border-radius: 8px; border-left: 4px solid var(--accent); }
-    .pred-label { font-size: 1.6rem; font-weight: 700; color: #34d399; text-transform: uppercase; }
-    .pred-conf { font-size: 1.2rem; font-weight: 600; color: #93c5fd; }
+    /* Prediction Result Highlight */
+    .result-display { display: flex; flex-direction: column; gap: 10px; width: 100%; }
+    .prediction-highlight {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      background: #0f172a;
+      padding: 14px 18px;
+      border-radius: 8px;
+      border-left: 4px solid var(--accent);
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+    .pred-label { font-size: 1.5rem; font-weight: 700; color: #34d399; text-transform: uppercase; }
+    .pred-conf { font-size: 1.15rem; font-weight: 600; color: #93c5fd; }
     .meta-tag { font-size: 0.75rem; color: var(--text-muted); background: #1e293b; padding: 4px 8px; border-radius: 4px; }
 
-    /* Table */
-    table { width: 100%; border-collapse: collapse; font-size: 0.85rem; }
-    th, td { text-align: left; padding: 10px 12px; border-bottom: 1px solid var(--border); }
-    th { color: var(--text-muted); font-weight: 500; }
-    .badge-lang { padding: 3px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 600; }
+    /* Tables (Responsive wrapper) */
+    .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 380px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { color: var(--text-muted); font-weight: 600; background: #0f172a; }
+    .badge-lang { padding: 3px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; }
     .badge-go { background: rgba(0, 172, 215, 0.2); color: #00add8; }
     .badge-py { background: rgba(255, 212, 59, 0.2); color: #ffd43b; }
     .badge-cpp { background: rgba(0, 89, 156, 0.2); color: #659ad2; }
@@ -74,135 +217,168 @@
     .badge-java { background: rgba(234, 45, 46, 0.2); color: #f87171; }
 
     /* Chat / Logs */
-    .chat-container { display: flex; flex-direction: column; gap: 10px; }
-    .log-box { height: 180px; overflow-y: auto; background: #0f172a; border-radius: 8px; border: 1px solid var(--border); padding: 12px; font-family: monospace; font-size: 0.8rem; display: flex; flex-direction: column; gap: 4px; }
+    .chat-container { display: flex; flex-direction: column; gap: 8px; width: 100%; }
+    .log-box {
+      height: 180px;
+      overflow-y: auto;
+      background: #0f172a;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      font-family: monospace;
+      font-size: 0.78rem;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
     .log-line { color: #94a3b8; }
     .log-success { color: #34d399; }
     .log-info { color: #60a5fa; }
     .log-error { color: #ef4444; }
-    .chat-input-row { display: flex; gap: 10px; }
+    .chat-input-row { display: flex; gap: 8px; }
     .chat-input-row input { flex: 1; }
+    .chat-input-row button { width: auto; padding: 0 18px; }
+
+    /* Responsive adjustments for phones (< 560px) */
+    @media (max-width: 560px) {
+      body { padding: 10px; }
+      header { flex-direction: column; align-items: stretch; text-align: left; }
+      .header-actions { justify-content: space-between; }
+      .config-bar { flex-direction: column; align-items: stretch; }
+      .config-bar input { width: 100%; }
+      .config-bar button { width: 100%; }
+      .preview-box { flex-direction: column; text-align: center; }
+      .preview-img { width: 100%; max-width: 200px; height: auto; aspect-ratio: 1 / 1; }
+      .preview-meta { align-items: center; width: 100%; }
+      .prediction-highlight { flex-direction: column; text-align: center; }
+    }
   </style>
 </head>
 <body>
   <div class="container">
     <header>
       <div class="title-group">
-        <h1>Open AI Cubes | Clúster de Inferencia Distribuida</h1>
-        <p>Arquitectura neuronal poliglotizada (Go, Python, Java, C++, Rust) en microcubos concurrentes</p>
+        <h1>Open AI Cubes | Inference Client</h1>
+        <p>Distributed neural inference across polyglot worker cubes</p>
       </div>
-      <div class="status-badge" id="clusterStatusBadge">
-        <div class="status-dot"></div>
-        <span id="clusterStatusText">Clúster Conectado</span>
+      <div class="header-actions">
+        <div class="session-badge" id="clientSessionBadge">
+          <span>Session:</span>
+          <span id="clientSessionId">Connecting...</span>
+        </div>
+        <div class="status-badge" id="clusterStatusBadge">
+          <div class="status-dot"></div>
+          <span id="clusterStatusText">Connected</span>
+        </div>
+        <a href="admin.html" class="btn-admin" target="_blank">Admin Console ↗</a>
       </div>
     </header>
 
-    <!-- Backend Configuration Bar -->
+    <!-- Backend API Endpoint Configuration Bar -->
     <div class="config-bar">
-      <span>Servidor Backend API:</span>
+      <span>Backend Orchestrator API:</span>
       <input type="text" id="apiBaseInput" placeholder="https://open-ai-cubes-backend.onrender.com" onchange="updateApiBase()">
-      <button class="btn-secondary" style="padding: 6px 14px;" onclick="testBackendConnection()">Conectar</button>
+      <button class="btn-secondary" style="width: auto; padding: 8px 16px;" onclick="testBackendConnection()">Connect</button>
     </div>
 
     <div class="grid-2">
-      <!-- Left: Inference & Real Dataset -->
+      <!-- Left: Visual Ingestion & Neural Inference -->
       <div class="card">
         <div class="card-title">
-          <span>Control de Inferencia Neuronal</span>
+          <span>Inference Control</span>
           <span class="meta-tag" id="latencyBadge">0.0 ms</span>
         </div>
 
         <div>
-          <label for="modeSelect">Modo de Ejecución del Clúster</label>
+          <label for="modeSelect">Cluster Execution Mode</label>
           <select id="modeSelect" onchange="changeExecutionMode()">
-            <option value="DISTRIBUTED">Modo 3: Distribuido (Pipeline de microcubos)</option>
-            <option value="PARALLEL_DISTRIBUTED" selected>Modo 4: Distribuido Paralelo (Pipeline concurrente)</option>
-            <option value="PARALLEL">Modo 2: Paralelo (Multinúcleo local)</option>
-            <option value="SEQUENTIAL">Modo 1: Secuencial (Mononúcleo)</option>
+            <option value="PARALLEL_DISTRIBUTED" selected>Mode 4: Parallel Distributed (Concurrent Pipeline)</option>
+            <option value="DISTRIBUTED">Mode 3: Distributed (Sequential Pipeline)</option>
+            <option value="PARALLEL">Mode 2: Parallel (Local Multi-Core)</option>
+            <option value="SEQUENTIAL">Mode 1: Sequential (Single-Thread)</option>
           </select>
         </div>
 
         <div>
-          <label for="sampleSelect">Fotografía del Dataset Real (dataset/real/test/)</label>
+          <label for="sampleSelect">Dataset Image Sample</label>
           <select id="sampleSelect" onchange="loadSampleImage()">
-            <option value="panda" selected>Fotografía Real: Oso Panda (dataset/real/test/panda/)</option>
-            <option value="dog">Fotografía Real: Perro (dataset/real/test/dog/)</option>
-            <option value="cat">Fotografía Real: Gato (dataset/real/test/cat/)</option>
-            <option value="lion">Fotografía Real: León (dataset/real/test/lion/)</option>
-            <option value="bear">Fotografía Real: Oso Pardo (dataset/real/test/bear/)</option>
+            <option value="panda" selected>Panda (dataset/real/test/panda/)</option>
+            <option value="dog">Dog (dataset/real/test/dog/)</option>
+            <option value="cat">Cat (dataset/real/test/cat/)</option>
+            <option value="lion">Lion (dataset/real/test/lion/)</option>
+            <option value="bear">Bear (dataset/real/test/bear/)</option>
           </select>
         </div>
 
-        <!-- Real Photographic Preview -->
+        <!-- High-Resolution Image Preview -->
         <div class="preview-box">
-          <img id="realPreviewImg" class="preview-img" src="" alt="Fotografía del Dataset Real">
+          <img id="realPreviewImg" class="preview-img" src="" alt="Dataset Photograph Preview">
           <div class="preview-meta">
-            <span style="font-weight: 600; font-size: 1rem; color: #60a5fa;" id="previewTitle">Fotografía Real: Oso Panda</span>
-            <span style="color: var(--text-muted);" id="previewSource">Archivo: dataset/real/test/panda/panda_test_001.jpg</span>
-            <span style="color: #34d399; font-weight: 500;">✓ Dataset Fotográfico Real (100% Sin degradar)</span>
+            <span style="font-weight: 600; font-size: 0.95rem; color: #60a5fa;" id="previewTitle">Photograph: Panda</span>
+            <span style="color: var(--text-muted);" id="previewSource">File: dataset/real/test/panda/panda_test_001.jpg</span>
+            <span style="color: #34d399; font-weight: 500;">High-resolution source preview</span>
             <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
-            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 6px;" onclick="document.getElementById('fileInput').click()">Subir Fotografía Personalizada</button>
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.78rem; margin-top: 4px;" onclick="document.getElementById('fileInput').click()">Upload Custom Image</button>
           </div>
         </div>
 
-        <button onclick="runInference()" id="btnInfer" style="padding: 14px; font-size: 1rem;">
-          ⚡ Ejecutar Inferencia en el Clúster
+        <button onclick="runInference()" id="btnInfer" style="padding: 13px; font-size: 0.95rem;">
+          Run Inference on Cluster
         </button>
 
         <div class="result-display" id="resultContainer" style="display: none;">
           <div class="prediction-highlight">
             <div>
-              <div style="font-size: 0.8rem; color: var(--text-muted);">Clase Clasificada</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Classified Class</div>
               <div class="pred-label" id="resLabel">PANDA</div>
             </div>
             <div style="text-align: right;">
-              <div style="font-size: 0.8rem; color: var(--text-muted);">Confianza / Probabilidad</div>
+              <div style="font-size: 0.75rem; color: var(--text-muted);">Confidence Score</div>
               <div class="pred-conf" id="resConfidence">98.40%</div>
             </div>
           </div>
-          <div style="font-size: 0.8rem; color: var(--text-muted); background: #0f172a; padding: 10px; border-radius: 6px;" id="resTrace">
-            Manejador: Pipeline Clúster
+          <div style="font-size: 0.78rem; color: var(--text-muted); background: #0f172a; padding: 10px; border-radius: 6px;" id="resTrace">
+            Handler: Cluster Pipeline
           </div>
         </div>
       </div>
 
-      <!-- Right: Worker Topology & Cluster Management -->
+      <!-- Right: Worker Topology & Dialogue Log -->
       <div class="card">
         <div class="card-title">
-          <span>Topología de Cubos Conectados</span>
-          <button class="btn-secondary" style="padding: 4px 10px; font-size: 0.75rem;" onclick="refreshWorkers()">Actualizar</button>
+          <span>Connected Worker Nodes</span>
+          <button class="btn-secondary" style="width: auto; padding: 4px 10px; font-size: 0.75rem;" onclick="refreshWorkers()">Refresh</button>
         </div>
 
-        <div style="overflow-x: auto;">
+        <div class="table-container">
           <table>
             <thead>
               <tr>
-                <th>ID de Cubo</th>
-                <th>Lenguaje</th>
-                <th>Hilos</th>
-                <th>Tareas</th>
-                <th>Estado</th>
+                <th>Cube ID</th>
+                <th>Language</th>
+                <th>Threads</th>
+                <th>Status</th>
               </tr>
             </thead>
             <tbody id="workersTableBody">
               <tr>
-                <td colspan="5" style="text-align: center; color: var(--text-muted);">Consultando cubos activos...</td>
+                <td colspan="4" style="text-align: center; color: var(--text-muted);">Querying connected worker nodes...</td>
               </tr>
             </tbody>
           </table>
         </div>
 
-        <!-- Chat / Dialogue Box (idClientChat 0812) -->
-        <div class="card-title" style="margin-top: 10px;">
-          <span>Diálogo de Clúster y Eventos (`idClientChat 0812`)</span>
+        <!-- Session Dialogue Log -->
+        <div class="card-title" style="margin-top: 6px;">
+          <span>Session Dialogue & Audit Log</span>
         </div>
         <div class="chat-container">
           <div class="log-box" id="chatLog">
-            <div class="log-line">[Sistema] Interfaz web lista.</div>
+            <div class="log-line">[System] Client workspace initialized.</div>
           </div>
           <div class="chat-input-row">
-            <input type="text" id="chatInput" placeholder="Comandos: status, infer, help..." onkeypress="if(event.key==='Enter') sendChatMessage()">
-            <button class="btn-secondary" onclick="sendChatMessage()">Enviar</button>
+            <input type="text" id="chatInput" placeholder="Commands: status, infer, help..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+            <button class="btn-secondary" onclick="sendChatMessage()">Send</button>
           </div>
         </div>
       </div>
@@ -211,6 +387,7 @@
 
   <script>
     let uploadedImagePixels = null;
+    let currentClientId = sessionStorage.getItem('open_ai_cubes_client_id');
 
     function getApiBase() {
       const saved = localStorage.getItem('open_ai_cubes_api_base');
@@ -225,7 +402,7 @@
       const val = document.getElementById('apiBaseInput').value.trim().replace(/\/+$/, '');
       if (val) {
         localStorage.setItem('open_ai_cubes_api_base', val);
-        log(`URL del Backend actualizada a: ${val}`, 'info');
+        log(`Backend API URL updated to: ${val}`, 'info');
         testBackendConnection();
       }
     }
@@ -240,6 +417,24 @@
       box.scrollTop = box.scrollHeight;
     }
 
+    async function initSession() {
+      if (!currentClientId) {
+        try {
+          const res = await fetch(`${getApiBase()}/api/session`);
+          if (res.ok) {
+            const data = await res.json();
+            currentClientId = data.client_id;
+            sessionStorage.setItem('open_ai_cubes_client_id', currentClientId);
+          }
+        } catch (ignored) {}
+        if (!currentClientId) {
+          currentClientId = 'Client-' + Math.floor(1000 + Math.random() * 9000);
+          sessionStorage.setItem('open_ai_cubes_client_id', currentClientId);
+        }
+      }
+      document.getElementById('clientSessionId').textContent = currentClientId;
+    }
+
     async function testBackendConnection() {
       const base = getApiBase();
       try {
@@ -249,7 +444,7 @@
           document.getElementById('clusterStatusBadge').style.background = 'rgba(16, 185, 129, 0.15)';
           document.getElementById('clusterStatusBadge').style.color = '#34d399';
           document.getElementById('clusterStatusText').textContent = 'Backend Online';
-          log(`Conexión exitosa con Backend en ${base} (Modo: ${data.mode || 'Activo'}).`, 'success');
+          log(`Connected to Backend at ${base} (Mode: ${data.mode || 'Active'}).`, 'success');
           loadSampleImage();
           refreshWorkers();
         } else {
@@ -258,8 +453,8 @@
       } catch (err) {
         document.getElementById('clusterStatusBadge').style.background = 'rgba(239, 68, 68, 0.15)';
         document.getElementById('clusterStatusBadge').style.color = '#f87171';
-        document.getElementById('clusterStatusText').textContent = 'Desconectado';
-        log(`No se pudo conectar a ${base}: ${err.message}. Verifique la URL del backend.`, 'error');
+        document.getElementById('clusterStatusText').textContent = 'Disconnected';
+        log(`Failed connecting to ${base}: ${err.message}.`, 'error');
       }
     }
 
@@ -271,16 +466,16 @@
       const source = document.getElementById('previewSource');
       
       const names = {
-        'panda': 'Fotografía Real: Oso Panda',
-        'dog': 'Fotografía Real: Perro',
-        'cat': 'Fotografía Real: Gato',
-        'lion': 'Fotografía Real: León',
-        'bear': 'Fotografía Real: Oso Pardo'
+        'panda': 'Photograph: Panda',
+        'dog': 'Photograph: Dog',
+        'cat': 'Photograph: Cat',
+        'lion': 'Photograph: Lion',
+        'bear': 'Photograph: Bear'
       };
-      title.textContent = names[label] || `Fotografía: ${label}`;
-      source.textContent = `Archivo: dataset/real/test/${label}/${label}_test_001.jpg`;
+      title.textContent = names[label] || `Photograph: ${label}`;
+      source.textContent = `File: dataset/real/test/${label}/${label}_test_001.jpg`;
       img.src = `${getApiBase()}/dataset/image?class=${label}`;
-      log(`Muestra del dataset real seleccionada: ${label} (100% alta resolución).`, 'info');
+      log(`Selected dataset sample: ${label}.`, 'info');
     }
 
     function handleFileUpload(event) {
@@ -291,22 +486,22 @@
         const img = new Image();
         img.onload = function() {
           document.getElementById('realPreviewImg').src = e.target.result;
-          document.getElementById('previewTitle').textContent = `Fotografía Personalizada: ${file.name}`;
-          document.getElementById('previewSource').textContent = `Resolución original: ${img.width}x${img.height} píxeles`;
+          document.getElementById('previewTitle').textContent = `Custom Image: ${file.name}`;
+          document.getElementById('previewSource').textContent = `Resolution: ${img.width}x${img.height} px`;
 
-          // Generate normalized pixels for inference
           const canvas = document.createElement('canvas');
           canvas.width = 28;
           canvas.height = 28;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, 28, 28);
-          const data = ctx.getImageData(0, 0, 28, 28).data;
-          uploadedImagePixels = [];
-          for (let i = 0; i < data.length; i += 4) {
-            const gray = (0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]) / 255.0;
-            uploadedImagePixels.push(gray);
+          const imgData = ctx.getImageData(0, 0, 28, 28);
+          const pixels = [];
+          for (let i = 0; i < imgData.data.length; i += 4) {
+            const gray = (0.299 * imgData.data[i] + 0.587 * imgData.data[i+1] + 0.114 * imgData.data[i+2]) / 255.0;
+            pixels.push(gray.toFixed(4));
           }
-          log(`Fotografía personalizada cargada: ${file.name} lista para inferencia.`, 'success');
+          uploadedImagePixels = pixels.join(',');
+          log(`Loaded custom image (${img.width}x${img.height} px). Normalized to 28x28 input tensor.`, 'info');
         };
         img.src = e.target.result;
       };
@@ -314,76 +509,45 @@
     }
 
     async function runInference() {
+      const base = getApiBase();
       const btn = document.getElementById('btnInfer');
       btn.disabled = true;
-      btn.textContent = '⏳ Procesando en clúster...';
-      const startT = performance.now();
-      const base = getApiBase();
+      btn.textContent = 'Executing inference...';
+      log(`Submitting inference request for session ${currentClientId}...`, 'info');
 
       try {
-        const payload = uploadedImagePixels ? uploadedImagePixels.map(p => p.toFixed(4)).join(',') : document.getElementById('sampleSelect').value;
+        let payload;
+        if (uploadedImagePixels) {
+          payload = uploadedImagePixels;
+        } else {
+          payload = document.getElementById('sampleSelect').value;
+        }
+
         const res = await fetch(`${base}/infer`, {
           method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
+          headers: {
+            'Content-Type': 'text/plain',
+            'X-Client-ID': currentClientId
+          },
           body: payload
         });
 
-        const resText = await res.text();
-        if (!resText || !resText.trim()) {
-          throw new Error(`Respuesta vacía del servidor (HTTP ${res.status}). El backend podría estar arrancando en frío.`);
-        }
-
-        let data;
-        try {
-          data = JSON.parse(resText);
-        } catch (jsonErr) {
-          throw new Error(`Formato inesperado: ${resText.substring(0, 100)}`);
-        }
-
-        const elapsed = (performance.now() - startT).toFixed(1);
-
-        document.getElementById('resultContainer').style.display = 'flex';
-        document.getElementById('resLabel').textContent = (data.label || 'DESC').toUpperCase();
-        document.getElementById('resConfidence').textContent = `${(data.confidence || 0).toFixed(2)}%`;
-        document.getElementById('latencyBadge').textContent = `${(data.latency_ms || elapsed)} ms`;
-        document.getElementById('resTrace').textContent = `Manejador: ${data.handler || 'Procesamiento Convolucional Real'}`;
-
-        log(`Inferencia completada: ${data.label} (${data.confidence.toFixed(2)}%) en ${data.latency_ms.toFixed(1)} ms.`, 'success');
-      } catch (err) {
-        log(`Error en inferencia: ${err.message}`, 'error');
-      } finally {
-        btn.disabled = false;
-        btn.textContent = '⚡ Ejecutar Inferencia en el Clúster';
-      }
-    }
-
-    async function refreshWorkers() {
-      const tbody = document.getElementById('workersTableBody');
-      const base = getApiBase();
-      try {
-        const res = await fetch(`${base}/workers`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
-        tbody.innerHTML = '';
-        if (!data.workers || data.workers.length === 0) {
-          tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Sin cubos conectados actualmente.</td></tr>';
-          return;
-        }
-        data.workers.forEach(w => {
-          const tr = document.createElement('tr');
-          const langClass = `badge-${w.language.toLowerCase().replace('+', 'p')}`;
-          tr.innerHTML = `
-            <td><strong>${w.id}</strong></td>
-            <td><span class="badge-lang ${langClass}">${w.language}</span></td>
-            <td>${w.threads} hilos</td>
-            <td>${w.active_tasks || 0}</td>
-            <td><span style="color:#34d399;">● Activo</span></td>
-          `;
-          tbody.appendChild(tr);
-        });
-        log(`Topología actualizada: ${data.workers.length} cubos registrados.`, 'info');
-      } catch (e) {
-        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #f87171;">Error al consultar topología del backend.</td></tr>';
+
+        document.getElementById('resultContainer').style.display = 'flex';
+        document.getElementById('resLabel').textContent = data.label.toUpperCase();
+        document.getElementById('resConfidence').textContent = `${data.confidence.toFixed(2)}%`;
+        document.getElementById('resTrace').textContent = `Handler: ${data.handler}`;
+        document.getElementById('latencyBadge').textContent = `${data.latency_ms.toFixed(2)} ms`;
+
+        log(`Inference result: ${data.label.toUpperCase()} (${data.confidence.toFixed(2)}%) in ${data.latency_ms.toFixed(2)} ms via ${data.mode}`, 'success');
+        refreshWorkers();
+      } catch (err) {
+        log(`Inference error: ${err.message}`, 'error');
+      } finally {
+        btn.disabled = false;
+        btn.textContent = 'Run Inference on Cluster';
       }
     }
 
@@ -391,36 +555,71 @@
       const mode = document.getElementById('modeSelect').value;
       const base = getApiBase();
       try {
-        await fetch(`${base}/mode`, {
+        const res = await fetch(`${base}/mode`, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: mode
         });
-        log(`Modo de ejecución del clúster cambiado a: ${mode}`, 'info');
-      } catch (e) {
-        log(`Aviso de modo: ${e.message}`, 'error');
+        if (res.ok) {
+          log(`Cluster execution mode updated to: ${mode}`, 'info');
+        }
+      } catch (err) {
+        log(`Failed updating execution mode: ${err.message}`, 'error');
       }
+    }
+
+    async function refreshWorkers() {
+      const base = getApiBase();
+      try {
+        const res = await fetch(`${base}/workers`);
+        if (!res.ok) return;
+        const data = await res.json();
+        const tbody = document.getElementById('workersTableBody');
+        tbody.innerHTML = '';
+        if (!data.workers || data.workers.length === 0) {
+          tbody.innerHTML = '<tr><td colspan="4" style="text-align: center; color: var(--text-muted);">No worker cubes registered</td></tr>';
+          return;
+        }
+
+        data.workers.forEach(w => {
+          const tr = document.createElement('tr');
+          const langClass = `badge-${w.language.toLowerCase().replace(/[^a-z]/g, '')}`;
+          tr.innerHTML = `
+            <td><strong>${w.id}</strong></td>
+            <td><span class="badge-lang ${langClass}">${w.language}</span></td>
+            <td>${w.threads} threads</td>
+            <td><span style="color: ${w.status === 'ACTIVE' ? '#34d399' : '#94a3b8'}; font-weight: 500;">${w.status}</span></td>
+          `;
+          tbody.appendChild(tr);
+        });
+      } catch (ignored) {}
     }
 
     function sendChatMessage() {
       const inp = document.getElementById('chatInput');
       const txt = inp.value.trim();
       if (!txt) return;
-      log(`Cliente: ${txt}`, 'info');
+      log(`${currentClientId}: ${txt}`);
       inp.value = '';
-      if (txt.toLowerCase() === 'status') {
-        refreshWorkers();
-      } else if (txt.toLowerCase() === 'infer') {
+
+      const lower = txt.toLowerCase();
+      if (lower === 'status') {
+        testBackendConnection();
+      } else if (lower === 'infer') {
         runInference();
+      } else if (lower === 'help') {
+        log('Available commands: status, infer, help', 'info');
       } else {
-        setTimeout(() => log(`Orquestador: Mensaje recibido [idClientChat 0812]. Comando reconocido.`, 'line'), 300);
+        log('Request processed by client session.', 'info');
       }
     }
 
-    // Initialize on page load
-    document.getElementById('apiBaseInput').value = getApiBase();
-    loadSampleImage();
-    testBackendConnection();
+    window.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('apiBaseInput').value = getApiBase();
+      initSession();
+      testBackendConnection();
+      setInterval(refreshWorkers, 5000);
+    });
   </script>
 </body>
 </html>

@@ -23,14 +23,17 @@ if [ -f "$PID_FILE" ]; then
     rm -f "$PID_FILE"
 fi
 
-# Fallback: Terminate any processes holding ports 9010 or 8080
+# Fallback: Terminate any processes holding ports 9010, 8085, or 8080
 if command -v fuser >/dev/null 2>&1; then
     fuser -k -9 9010/tcp >/dev/null 2>&1 || true
+    fuser -k -9 8085/tcp >/dev/null 2>&1 || true
     fuser -k -9 8080/tcp >/dev/null 2>&1 || true
 fi
 
 # Fallback by process name
 pkill -9 -f "server.ServerOrchestrator" 2>/dev/null || true
+pkill -9 -f "server.AdminMonitorGui" 2>/dev/null || true
+pkill -9 -f "client.DesktopChatGui" 2>/dev/null || true
 pkill -9 -f "worker.JavaWorkerCube" 2>/dev/null || true
 pkill -9 -f "python3 worker_cube.py" 2>/dev/null || true
 pkill -9 -f "./worker_cube" 2>/dev/null || true

@@ -18,16 +18,15 @@ import java.io.OutputStreamWriter;
 import java.net.Socket;
 import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
-import java.util.Arrays;
-import java.util.Comparator;
 import java.util.Date;
+import java.util.Random;
 
 /**
- * DesktopChatGui: Cliente de inferencia neuronal distribuida para Open AI Cubes.
- * Orientado exclusivamente al usuario/cliente. Cero datos simulados (100% dataset real).
+ * DesktopChatGui: Client inference workspace for the Open AI Cubes architecture.
+ * Dedicated to client-side visual ingestion, model prediction, and cluster connectivity.
  */
 public class DesktopChatGui extends JFrame {
-    private final String clientId;
+    private String clientId;
     private final String serverHost;
     private final int serverPort;
 
@@ -44,6 +43,7 @@ public class DesktopChatGui extends JFrame {
     private JButton loadFileButton;
     private JButton identifyButton;
     private JLabel statusLabel;
+    private JLabel sessionLabel;
     private ImagePreviewPanel previewPanel;
     private JLabel predictionLabel;
     private JLabel confidenceLabel;
@@ -53,8 +53,10 @@ public class DesktopChatGui extends JFrame {
     private ImageMatrix currentLoadedMatrix;
 
     public DesktopChatGui(String clientId, String serverHost, int serverPort) {
-        super("Open AI Cubes - Cliente de Inferencia Neuronal");
-        this.clientId = clientId;
+        super("Open AI Cubes | Client Inference Workspace");
+        this.clientId = (clientId != null && !clientId.trim().isEmpty() && !clientId.equals("0812"))
+                ? clientId
+                : "Client-" + (1000 + new Random().nextInt(9000));
         this.serverHost = serverHost;
         this.serverPort = serverPort;
 
@@ -79,33 +81,33 @@ public class DesktopChatGui extends JFrame {
         titleBox.setLayout(new BoxLayout(titleBox, BoxLayout.Y_AXIS));
         titleBox.setOpaque(false);
 
-        JLabel titleLabel = new JLabel("Open AI Cubes | Cliente de Inferencia");
+        JLabel titleLabel = new JLabel("Open AI Cubes | Client Workspace");
         titleLabel.setFont(new Font("SansSerif", Font.BOLD, 18));
         titleLabel.setForeground(new Color(30, 41, 59));
 
-        JLabel validatedUserLabel = new JLabel("Sesión Concurrente Activa  |  idClientChat: " + clientId);
-        validatedUserLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
-        validatedUserLabel.setForeground(new Color(16, 185, 129));
+        sessionLabel = new JLabel("Active Session: " + clientId);
+        sessionLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
+        sessionLabel.setForeground(new Color(16, 185, 129));
 
         titleBox.add(titleLabel);
         titleBox.add(Box.createVerticalStrut(3));
-        titleBox.add(validatedUserLabel);
+        titleBox.add(sessionLabel);
         topHeader.add(titleBox, BorderLayout.WEST);
 
         JPanel headerRight = new JPanel(new FlowLayout(FlowLayout.RIGHT, 10, 0));
         headerRight.setOpaque(false);
-        headerRight.add(new JLabel("Modo de Clúster:"));
+        headerRight.add(new JLabel("Execution Mode:"));
         String[] modes = {
-                "4. Distribuido Paralelo (Pipeline Concurrente)",
-                "3. Distribuido (Pipeline de Microcubos)",
-                "2. Paralelo (Multinúcleo Local)",
-                "1. Secuencial (Mononúcleo Local)"
+                "Mode 4: Parallel Distributed (Concurrent Pipeline)",
+                "Mode 3: Distributed (Sequential Pipeline)",
+                "Mode 2: Parallel (Local Multi-Core)",
+                "Mode 1: Sequential (Single-Thread)"
         };
         modeSelector = new JComboBox<>(modes);
         modeSelector.addActionListener(e -> onModeChanged());
         headerRight.add(modeSelector);
 
-        statusLabel = new JLabel("Estado: Conectando...");
+        statusLabel = new JLabel("Status: Connecting...");
         statusLabel.setFont(new Font("SansSerif", Font.ITALIC, 12));
         headerRight.add(statusLabel);
         topHeader.add(headerRight, BorderLayout.EAST);
@@ -115,188 +117,224 @@ public class DesktopChatGui extends JFrame {
         JPanel mainPanel = new JPanel(new GridLayout(1, 2, 14, 14));
         mainPanel.setBorder(BorderFactory.createEmptyBorder(8, 16, 12, 16));
 
-        // ==================== LEFT PANEL: INFERENCE & REAL PREVIEW ====================
+        // ==================== LEFT PANEL: INFERENCE & PREVIEW ====================
         JPanel leftPanel = new JPanel(new BorderLayout(10, 10));
 
         // Top Toolbar: Sample selector & load custom file
         JPanel toolbar = new JPanel(new FlowLayout(FlowLayout.LEFT, 8, 4));
-        toolbar.setBorder(BorderFactory.createTitledBorder("Selección de Fotografía (Dataset Real)"));
+        toolbar.setBorder(BorderFactory.createTitledBorder("Dataset Image Selection"));
         String[] samples = {"panda", "dog", "cat", "lion", "bear"};
         sampleSelector = new JComboBox<>(samples);
         sampleSelector.setPreferredSize(new Dimension(110, 28));
         sampleSelector.addActionListener(e -> loadCatalogSample());
 
-        loadFileButton = new JButton("Cargar Fotografía Local...");
+        loadFileButton = new JButton("Load Custom Image...");
         loadFileButton.setFont(new Font("SansSerif", Font.PLAIN, 12));
-        loadFileButton.addActionListener(e -> onChooseLocalFile());
+        loadFileButton.addActionListener(e -> chooseLocalFile());
 
-        JLabel dbBadge = new JLabel("✓ Base de Datos Real (dataset/real/)");
-        dbBadge.setFont(new Font("SansSerif", Font.BOLD, 11));
-        dbBadge.setForeground(new Color(22, 163, 74));
-
-        toolbar.add(new JLabel("Muestra:"));
+        toolbar.add(new JLabel("Sample:"));
         toolbar.add(sampleSelector);
+        toolbar.add(Box.createHorizontalStrut(10));
         toolbar.add(loadFileButton);
-        toolbar.add(Box.createHorizontalStrut(8));
-        toolbar.add(dbBadge);
         leftPanel.add(toolbar, BorderLayout.NORTH);
 
-        // Center: Full-Fidelity Photographic Preview (Zero Degradation)
-        JPanel previewCard = new JPanel(new BorderLayout());
-        previewCard.setBorder(BorderFactory.createTitledBorder("Vista Previa Fotográfica Original"));
+        // Center: Full-fidelity image preview
         previewPanel = new ImagePreviewPanel();
-        previewPanel.setBackground(new Color(15, 23, 42));
-        previewCard.add(previewPanel, BorderLayout.CENTER);
-        leftPanel.add(previewCard, BorderLayout.CENTER);
+        previewPanel.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225)),
+                "High-Resolution Image Preview",
+                TitledBorder.LEFT, TitledBorder.TOP,
+                new Font("SansSerif", Font.BOLD, 12),
+                new Color(71, 85, 105)));
+        leftPanel.add(previewPanel, BorderLayout.CENTER);
 
-        // Bottom: Action Button & Results Card
-        JPanel bottomCard = new JPanel();
-        bottomCard.setLayout(new BoxLayout(bottomCard, BoxLayout.Y_AXIS));
-        bottomCard.setBorder(BorderFactory.createTitledBorder("Resultado de la Inferencia"));
+        // Bottom Left: Prediction Details & Trigger Button
+        JPanel leftBottom = new JPanel(new BorderLayout(8, 8));
+        JPanel metricsPanel = new JPanel();
+        metricsPanel.setLayout(new BoxLayout(metricsPanel, BoxLayout.Y_AXIS));
+        metricsPanel.setBackground(new Color(248, 250, 252));
+        metricsPanel.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(226, 232, 240)),
+                BorderFactory.createEmptyBorder(10, 14, 10, 14)));
 
-        identifyButton = new JButton("⚡ Identificar Fotografía en el Clúster");
-        identifyButton.setFont(new Font("SansSerif", Font.BOLD, 14));
-        identifyButton.setBackground(new Color(37, 99, 235));
-        identifyButton.setForeground(Color.BLACK);
-        identifyButton.setAlignmentX(Component.CENTER_ALIGNMENT);
-        identifyButton.setMaximumSize(new Dimension(Integer.MAX_VALUE, 40));
-        identifyButton.addActionListener(e -> onIdentifyClicked());
-        bottomCard.add(identifyButton);
-        bottomCard.add(Box.createVerticalStrut(8));
+        predictionLabel = new JLabel("Class: NONE");
+        predictionLabel.setFont(new Font("SansSerif", Font.BOLD, 16));
+        predictionLabel.setForeground(new Color(15, 23, 42));
 
-        JPanel resultsGrid = new JPanel(new GridLayout(2, 2, 8, 4));
-        resultsGrid.setOpaque(false);
-        predictionLabel = new JLabel("Clase: -");
-        predictionLabel.setFont(new Font("SansSerif", Font.BOLD, 15));
-        predictionLabel.setForeground(new Color(37, 99, 235));
-
-        confidenceLabel = new JLabel("Confianza: -");
+        confidenceLabel = new JLabel("Confidence: 0.0%");
         confidenceLabel.setFont(new Font("SansSerif", Font.BOLD, 14));
-        confidenceLabel.setForeground(new Color(16, 185, 129));
+        confidenceLabel.setForeground(new Color(37, 99, 235));
 
-        latencyLabel = new JLabel("Latencia: -");
+        latencyLabel = new JLabel("Latency: 0.0 ms  |  Mode: PARALLEL");
         latencyLabel.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        latencyLabel.setForeground(new Color(100, 116, 139));
 
-        handlerLabel = new JLabel("Manejador: -");
-        handlerLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        handlerLabel = new JLabel("Handler: Ready");
+        handlerLabel.setFont(new Font("SansSerif", Font.ITALIC, 11));
         handlerLabel.setForeground(new Color(100, 116, 139));
 
-        resultsGrid.add(predictionLabel);
-        resultsGrid.add(confidenceLabel);
-        resultsGrid.add(latencyLabel);
-        resultsGrid.add(handlerLabel);
-        bottomCard.add(resultsGrid);
+        metricsPanel.add(predictionLabel);
+        metricsPanel.add(Box.createVerticalStrut(4));
+        metricsPanel.add(confidenceLabel);
+        metricsPanel.add(Box.createVerticalStrut(4));
+        metricsPanel.add(latencyLabel);
+        metricsPanel.add(Box.createVerticalStrut(2));
+        metricsPanel.add(handlerLabel);
+        leftBottom.add(metricsPanel, BorderLayout.CENTER);
 
-        leftPanel.add(bottomCard, BorderLayout.SOUTH);
+        identifyButton = new JButton("Run Inference on Cluster");
+        identifyButton.setFont(new Font("SansSerif", Font.BOLD, 14));
+        identifyButton.setBackground(new Color(37, 99, 235));
+        identifyButton.setForeground(Color.WHITE);
+        identifyButton.setFocusPainted(false);
+        identifyButton.setPreferredSize(new Dimension(100, 44));
+        identifyButton.addActionListener(e -> executeInference());
+        leftBottom.add(identifyButton, BorderLayout.SOUTH);
+
+        leftPanel.add(leftBottom, BorderLayout.SOUTH);
         mainPanel.add(leftPanel);
 
-        // ==================== RIGHT PANEL: CLUSTER NODES & CHAT ====================
+        // ==================== RIGHT PANEL: CLUSTER TOPOLOGY & DIALOGUE ====================
         JPanel rightPanel = new JPanel(new BorderLayout(10, 10));
 
-        // Active Cluster Workers Table (Auto-bound by system)
-        JPanel workersCard = new JPanel(new BorderLayout(4, 4));
-        workersCard.setBorder(BorderFactory.createTitledBorder("Topología de Cubos Activos (Vinculados por el Sistema)"));
-        String[] colNames = {"ID de Cubo", "Lenguaje", "Hilos", "Tareas", "Estado"};
+        // Top Right: Connected Worker Cubes Table
+        JPanel topologyCard = new JPanel(new BorderLayout(6, 6));
+        topologyCard.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225)),
+                "Connected Worker Nodes",
+                TitledBorder.LEFT, TitledBorder.TOP,
+                new Font("SansSerif", Font.BOLD, 12),
+                new Color(71, 85, 105)));
+
+        String[] colNames = {"Worker ID", "Language", "Threads", "Status"};
         workersTableModel = new DefaultTableModel(colNames, 0) {
             @Override
-            public boolean isCellEditable(int r, int c) { return false; }
+            public boolean isCellEditable(int row, int column) { return false; }
         };
         JTable workersTable = new JTable(workersTableModel);
-        workersTable.setRowHeight(22);
-        JScrollPane scrollTable = new JScrollPane(workersTable);
-        scrollTable.setPreferredSize(new Dimension(420, 150));
-        workersCard.add(scrollTable, BorderLayout.CENTER);
+        workersTable.setRowHeight(24);
+        workersTable.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        workersTable.getTableHeader().setFont(new Font("SansSerif", Font.BOLD, 11));
+        workersTable.getTableHeader().setBackground(new Color(241, 245, 249));
 
-        JPanel workersFooter = new JPanel(new BorderLayout());
-        workersCountLabel = new JLabel("Cubos conectados: 0");
-        workersCountLabel.setFont(new Font("SansSerif", Font.BOLD, 12));
-        JButton refreshBtn = new JButton("Actualizar");
-        refreshBtn.addActionListener(e -> requestWorkersUpdate());
-        workersFooter.add(workersCountLabel, BorderLayout.WEST);
-        workersFooter.add(refreshBtn, BorderLayout.EAST);
-        workersCard.add(workersFooter, BorderLayout.SOUTH);
-        rightPanel.add(workersCard, BorderLayout.NORTH);
+        JScrollPane tableScroll = new JScrollPane(workersTable);
+        tableScroll.setPreferredSize(new Dimension(450, 150));
+        topologyCard.add(tableScroll, BorderLayout.CENTER);
 
-        // Client Interactive Dialogue (`idClientChat 0812`)
+        workersCountLabel = new JLabel("Connected Cubes: 0");
+        workersCountLabel.setFont(new Font("SansSerif", Font.PLAIN, 11));
+        workersCountLabel.setBorder(BorderFactory.createEmptyBorder(2, 6, 4, 6));
+        topologyCard.add(workersCountLabel, BorderLayout.SOUTH);
+        rightPanel.add(topologyCard, BorderLayout.NORTH);
+
+        // Bottom Right: Chat & Event Dialogue Log
         JPanel chatCard = new JPanel(new BorderLayout(6, 6));
-        chatCard.setBorder(BorderFactory.createTitledBorder("Diálogo del Cliente y Registro de Red (idClientChat 0812)"));
+        chatCard.setBorder(BorderFactory.createTitledBorder(
+                BorderFactory.createLineBorder(new Color(203, 213, 225)),
+                "Session Dialogue & Audit Log",
+                TitledBorder.LEFT, TitledBorder.TOP,
+                new Font("SansSerif", Font.BOLD, 12),
+                new Color(71, 85, 105)));
+
         chatArea = new JTextArea();
         chatArea.setEditable(false);
         chatArea.setFont(new Font("Monospaced", Font.PLAIN, 12));
-        chatArea.setBackground(new Color(248, 250, 252));
-        JScrollPane scrollChat = new JScrollPane(chatArea);
-        chatCard.add(scrollChat, BorderLayout.CENTER);
+        chatArea.setBackground(new Color(15, 23, 42));
+        chatArea.setForeground(new Color(241, 245, 249));
+        chatArea.setCaretColor(Color.WHITE);
+        JScrollPane chatScroll = new JScrollPane(chatArea);
 
-        JPanel chatInputRow = new JPanel(new BorderLayout(6, 0));
+        JPanel chatInputRow = new JPanel(new BorderLayout(6, 6));
         JTextField chatInputField = new JTextField();
-        JButton sendBtn = new JButton("Enviar");
-        Runnable sendAction = () -> {
+        chatInputField.setFont(new Font("SansSerif", Font.PLAIN, 12));
+        JButton sendButton = new JButton("Send");
+        sendButton.setFont(new Font("SansSerif", Font.BOLD, 12));
+
+        Runnable sendMsg = () -> {
             String text = chatInputField.getText().trim();
             if (!text.isEmpty()) {
-                appendChat("Yo: " + text);
+                appendChat(clientId + ": " + text);
                 chatInputField.setText("");
-                if ("status".equalsIgnoreCase(text)) {
-                    requestWorkersUpdate();
-                } else if ("infer".equalsIgnoreCase(text)) {
-                    onIdentifyClicked();
-                } else {
-                    appendChat("Bot: Solicitud recibida [idClientChat 0812]. Concurrencia de cliente activa.");
-                }
+                handleUserChatMessage(text);
             }
         };
-        sendBtn.addActionListener(e -> sendAction.run());
-        chatInputField.addActionListener(e -> sendAction.run());
+        sendButton.addActionListener(e -> sendMsg.run());
+        chatInputField.addActionListener(e -> sendMsg.run());
+
         chatInputRow.add(chatInputField, BorderLayout.CENTER);
-        chatInputRow.add(sendBtn, BorderLayout.EAST);
+        chatInputRow.add(sendButton, BorderLayout.EAST);
+
+        chatCard.add(chatScroll, BorderLayout.CENTER);
         chatCard.add(chatInputRow, BorderLayout.SOUTH);
-
         rightPanel.add(chatCard, BorderLayout.CENTER);
-        mainPanel.add(rightPanel);
 
+        mainPanel.add(rightPanel);
         add(mainPanel, BorderLayout.CENTER);
 
-        // Load initial real photographic sample
         loadCatalogSample();
-        appendChat("[Sistema] Cliente iniciado. Conectando hilo independiente al orquestador.");
+    }
+
+    private void handleUserChatMessage(String query) {
+        String lower = query.toLowerCase();
+        if (lower.contains("status")) {
+            appendChat("System: Session is active. Mode: " + modeSelector.getSelectedItem());
+        } else if (lower.contains("help")) {
+            appendChat("System: Available commands: 'status', 'infer', 'workers', 'mode <1-4>'");
+        } else if (lower.contains("workers")) {
+            requestWorkersUpdate();
+            appendChat("System: Querying connected worker nodes...");
+        } else if (lower.contains("infer")) {
+            executeInference();
+        } else {
+            appendChat("System: Request received. Client thread handling query.");
+        }
     }
 
     private void loadCatalogSample() {
-        String selected = (String) sampleSelector.getSelectedItem();
-        if (selected == null) selected = "panda";
+        String sample = (String) sampleSelector.getSelectedItem();
+        if (sample == null) sample = "panda";
         try {
-            currentLoadedMatrix = ImageMatrix.createSample(selected);
+            currentLoadedMatrix = ImageMatrix.createSample(sample);
             previewPanel.setImage(currentLoadedMatrix);
-            appendChat("[Cliente] Muestra del dataset real cargada: " + selected.toUpperCase() + " (fotografia real original)");
-        } catch (Exception ex) {
-            appendChat("[Cliente] Error cargando muestra real: " + ex.getMessage());
+            appendChat("System: Loaded dataset sample: " + sample.toUpperCase());
+        } catch (Exception e) {
+            appendChat("System: Notice loading sample (" + e.getMessage() + ")");
         }
     }
 
-    private void onChooseLocalFile() {
+    private void chooseLocalFile() {
         JFileChooser chooser = new JFileChooser();
-        chooser.setDialogTitle("Seleccionar Fotografía para Inferencia");
-        chooser.setFileFilter(new javax.swing.filechooser.FileNameExtensionFilter("Imágenes (JPG, PNG, BMP)", "jpg", "jpeg", "png", "bmp"));
+        chooser.setDialogTitle("Select Image File");
         int res = chooser.showOpenDialog(this);
         if (res == JFileChooser.APPROVE_OPTION) {
-            File selected = chooser.getSelectedFile();
+            File f = chooser.getSelectedFile();
             try {
-                currentLoadedMatrix = ImageMatrix.fromFile(selected, "custom_photo");
+                currentLoadedMatrix = ImageMatrix.fromFile(f, "custom");
                 previewPanel.setImage(currentLoadedMatrix);
-                appendChat("[Cliente] Fotografía personalizada cargada: " + selected.getName() + " (" + currentLoadedMatrix.getWidth() + "x" + currentLoadedMatrix.getHeight() + " px)");
+                appendChat("System: Loaded image file: " + f.getName());
             } catch (Exception ex) {
-                appendChat("[Cliente] Error decodificando imagen: " + ex.getMessage());
+                JOptionPane.showMessageDialog(this, "Failed to read image: " + ex.getMessage(), "Error", JOptionPane.ERROR_MESSAGE);
             }
         }
     }
 
-    private void onIdentifyClicked() {
-        if (currentLoadedMatrix == null) return;
-        appendChat("Yo: Identificar fotografía (" + currentLoadedMatrix.getLabel() + ")");
+    private void executeInference() {
+        if (currentLoadedMatrix == null) {
+            JOptionPane.showMessageDialog(this, "Please select or load an image first.", "Notice", JOptionPane.WARNING_MESSAGE);
+            return;
+        }
+
         identifyButton.setEnabled(false);
+        predictionLabel.setText("Class: EVALUATING...");
+        confidenceLabel.setText("Confidence: --");
+        latencyLabel.setText("Processing request...");
 
         new Thread(() -> {
             try {
-                if (socket == null || socket.isClosed()) connectToServer();
+                if (socket == null || socket.isClosed()) {
+                    connectToServer();
+                    Thread.sleep(300);
+                }
 
                 String payload = currentLoadedMatrix.getLabel() + "," + currentLoadedMatrix.toCsvString();
                 ProtocolMessage req = new ProtocolMessage(ProtocolConstants.CMD_CLIENT_REQ, clientId, payload);
@@ -313,28 +351,28 @@ public class DesktopChatGui extends JFrame {
                         String[] parts = resp.getPayload().split("\\|");
                         String label = parts[0];
                         String conf = (parts.length > 1) ? parts[1] : "0.0";
-                        String modeUsed = (parts.length > 2) ? parts[2] : "Modo";
+                        String modeUsed = (parts.length > 2) ? parts[2] : "Mode";
                         String latMs = (parts.length > 3) ? parts[3] : "0.0";
-                        String trace = (parts.length > 5) ? parts[5] : "Pipeline Clúster";
+                        String trace = (parts.length > 5) ? parts[5] : "Cluster Pipeline";
 
-                        predictionLabel.setText("Clase: " + label.toUpperCase());
-                        confidenceLabel.setText("Confianza: " + conf + "%");
-                        latencyLabel.setText("Latencia: " + latMs + " ms  |  Modo: " + modeUsed);
-                        handlerLabel.setText("Manejador: " + trace);
+                        predictionLabel.setText("Class: " + label.toUpperCase());
+                        confidenceLabel.setText("Confidence: " + conf + "%");
+                        latencyLabel.setText("Latency: " + latMs + " ms  |  Mode: " + modeUsed);
+                        handlerLabel.setText("Handler: " + trace);
 
-                        appendChat("Bot: Clasificación completada exitosamente");
-                        appendChat("     Clase Predicha: " + label.toUpperCase());
-                        appendChat("     Confianza: " + conf + "%");
-                        appendChat("     Tiempo: " + latMs + " ms");
-                        appendChat("     Trazabilidad: " + trace);
+                        appendChat("Cluster: Inference completed successfully");
+                        appendChat("         Predicted Class: " + label.toUpperCase());
+                        appendChat("         Confidence:      " + conf + "%");
+                        appendChat("         Latency:         " + latMs + " ms");
+                        appendChat("         Pipeline Trace:  " + trace);
                     } else {
-                        appendChat("Bot: Error en respuesta de inferencia del servidor.");
+                        appendChat("Cluster: Received invalid inference response.");
                     }
                     identifyButton.setEnabled(true);
                 });
             } catch (Exception ex) {
                 SwingUtilities.invokeLater(() -> {
-                    appendChat("Bot: Error de comunicación durante la inferencia (" + ex.getMessage() + ")");
+                    appendChat("Cluster: Network communication error (" + ex.getMessage() + ")");
                     identifyButton.setEnabled(true);
                 });
             }
@@ -357,9 +395,9 @@ public class DesktopChatGui extends JFrame {
                     writer.write(req.toWireString());
                     writer.flush();
                 }
-                appendChat("[Cliente] Modo de ejecución cambiado a: " + finalMode);
+                appendChat("Client: Switched cluster execution mode to " + finalMode);
             } catch (Exception ex) {
-                appendChat("[Cliente] Aviso al cambiar modo: " + ex.getMessage());
+                appendChat("Client: Error changing mode: " + ex.getMessage());
             }
         }).start();
     }
@@ -370,14 +408,31 @@ public class DesktopChatGui extends JFrame {
                 socket = new Socket(serverHost, serverPort);
                 reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
                 writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+
+                // Read optional dynamic ID assignment greeting from server
+                try {
+                    socket.setSoTimeout(1500);
+                    String firstLine = reader.readLine();
+                    if (firstLine != null) {
+                        ProtocolMessage greeting = ProtocolMessage.parse(firstLine);
+                        if (greeting != null && "ASSIGN_CLIENT_ID".equals(greeting.getAction())) {
+                            this.clientId = greeting.getId();
+                            SwingUtilities.invokeLater(() -> sessionLabel.setText("Active Session: " + clientId));
+                        }
+                    }
+                } catch (Exception ignored) {
+                } finally {
+                    socket.setSoTimeout(0);
+                }
+
                 SwingUtilities.invokeLater(() -> {
-                    statusLabel.setText("Estado: Conectado a " + serverHost + ":" + serverPort);
+                    statusLabel.setText("Status: Connected to " + serverHost + ":" + serverPort);
                     statusLabel.setForeground(new Color(22, 163, 74));
                 });
                 requestWorkersUpdate();
             } catch (IOException e) {
                 SwingUtilities.invokeLater(() -> {
-                    statusLabel.setText("Estado: Sin conexión (" + e.getMessage() + ")");
+                    statusLabel.setText("Status: Disconnected (" + e.getMessage() + ")");
                     statusLabel.setForeground(new Color(220, 38, 38));
                 });
             }
@@ -406,7 +461,7 @@ public class DesktopChatGui extends JFrame {
     private void updateWorkersTable(String payload) {
         workersTableModel.setRowCount(0);
         if (payload == null || payload.trim().isEmpty()) {
-            workersCountLabel.setText("Cubos conectados: 0");
+            workersCountLabel.setText("Connected Cubes: 0");
             return;
         }
         String[] rows = payload.split(";");
@@ -414,11 +469,11 @@ public class DesktopChatGui extends JFrame {
         for (String r : rows) {
             String[] parts = r.split(",");
             if (parts.length >= 5) {
-                workersTableModel.addRow(new Object[]{parts[0], parts[1], parts[2] + " hilos", parts[3], parts[4]});
+                workersTableModel.addRow(new Object[]{parts[0], parts[1], parts[2] + " threads", parts[4]});
                 count++;
             }
         }
-        workersCountLabel.setText("Cubos conectados: " + count);
+        workersCountLabel.setText("Connected Cubes: " + count);
     }
 
     private void startWorkerPollTimer() {
@@ -433,8 +488,7 @@ public class DesktopChatGui extends JFrame {
     }
 
     /**
-     * Preview canvas rendering the full-fidelity real photograph without degradation or distortion.
-     * Preserves aspect ratio, applies bicubic interpolation, and displays true RGB colors.
+     * Preview canvas rendering full-fidelity image without aspect ratio distortion.
      */
     private static class ImagePreviewPanel extends JPanel {
         private ImageMatrix matrix;
@@ -457,7 +511,7 @@ public class DesktopChatGui extends JFrame {
             if (matrix == null) {
                 g2.setColor(new Color(148, 163, 184));
                 g2.setFont(new Font("SansSerif", Font.PLAIN, 13));
-                g2.drawString("Cargando fotografía real...", panelW / 2 - 80, panelH / 2);
+                g2.drawString("Loading image...", panelW / 2 - 50, panelH / 2);
                 return;
             }
 
@@ -490,7 +544,7 @@ public class DesktopChatGui extends JFrame {
     }
 
     public static void main(String[] args) {
-        String id = (args.length > 0) ? args[0] : "0812";
+        String id = (args.length > 0) ? args[0] : null;
         String host = (args.length > 1) ? args[1] : "localhost";
         int port = (args.length > 2) ? Integer.parseInt(args[2]) : ProtocolConstants.DEFAULT_CLIENT_PORT;
 

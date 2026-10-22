@@ -261,7 +261,7 @@ public class ModelTrainer {
                         if (w > 0) sb.append(", ");
                         sb.append(distWorkers.get(w).getWorkerId()).append(" (").append(distWorkers.get(w).getLanguage()).append(")");
                     }
-                    participatingNodes = "Cluster (Distribuido Secuencial): " + sb.toString();
+                    participatingNodes = "Cluster (Distributed Sequential): " + sb.toString();
                 }
                 break;
 
@@ -320,7 +320,7 @@ public class ModelTrainer {
                         if (w > 0) sb.append(", ");
                         sb.append(parDistWorkers.get(w).getWorkerId()).append(" (").append(parDistWorkers.get(w).getLanguage()).append(")");
                     }
-                    participatingNodes = "Cluster (Distribuido Paralelo): " + sb.toString();
+                    participatingNodes = "Cluster (Distributed Parallel): " + sb.toString();
                 }
                 break;
 

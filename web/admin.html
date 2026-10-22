@@ -1,0 +1,502 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=5.0">
+  <title>Open AI Cubes | Cluster Administration Console</title>
+  <style>
+    :root {
+      --bg: #0b0f19;
+      --card-bg: #151e2e;
+      --border: #263346;
+      --primary: #3b82f6;
+      --accent: #10b981;
+      --purple: #a855f7;
+      --text: #f8fafc;
+      --text-muted: #94a3b8;
+      --error: #ef4444;
+      --warning: #f59e0b;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+    body { background-color: var(--bg); color: var(--text); min-height: 100vh; padding: 16px; -webkit-font-smoothing: antialiased; }
+    .container { max-width: 1320px; margin: 0 auto; display: flex; flex-direction: column; gap: 16px; width: 100%; }
+
+    /* Header */
+    header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 16px 20px;
+      background: var(--card-bg);
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+    .title-group h1 { font-size: 1.4rem; font-weight: 700; color: #60a5fa; }
+    .title-group p { font-size: 0.85rem; color: var(--text-muted); margin-top: 3px; }
+
+    .header-actions { display: flex; align-items: center; gap: 10px; flex-wrap: wrap; }
+    .status-badge {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: 20px;
+      background: rgba(16, 185, 129, 0.15);
+      color: #34d399;
+      border: 1px solid rgba(16, 185, 129, 0.3);
+      font-weight: 600;
+    }
+    .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
+    @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
+
+    .btn-nav {
+      background: #1e293b;
+      color: #f8fafc;
+      padding: 6px 14px;
+      border-radius: 8px;
+      text-decoration: none;
+      font-size: 0.8rem;
+      font-weight: 600;
+      border: 1px solid var(--border);
+      transition: background 0.2s;
+    }
+    .btn-nav:hover { background: #334155; }
+
+    /* KPI Grid */
+    .kpi-grid {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 14px;
+      width: 100%;
+    }
+    @media (max-width: 900px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+    @media (max-width: 480px) { .kpi-grid { grid-template-columns: 1fr; } }
+
+    .kpi-card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 16px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+    .kpi-title { font-size: 0.78rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+    .kpi-value { font-size: 1.8rem; font-weight: 700; color: #f8fafc; }
+    .kpi-blue { color: #60a5fa; }
+    .kpi-green { color: #34d399; }
+    .kpi-purple { color: #c084fc; }
+    .kpi-amber { color: #fbbf24; }
+
+    /* Cluster Mode Bar */
+    .mode-bar {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 14px 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 14px;
+      flex-wrap: wrap;
+    }
+    .mode-label { font-weight: 600; font-size: 0.9rem; color: #93c5fd; }
+    .mode-buttons { display: flex; gap: 8px; flex-wrap: wrap; }
+    .btn-mode {
+      background: #0f172a;
+      color: var(--text-muted);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+    .btn-mode:hover { background: #1e293b; color: white; }
+    .btn-mode.active {
+      background: #2563eb;
+      color: white;
+      border-color: #3b82f6;
+      box-shadow: 0 0 10px rgba(59, 130, 246, 0.4);
+    }
+
+    /* Grid for Tables */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; width: 100%; }
+    @media (max-width: 980px) { .grid-2 { grid-template-columns: 1fr; } }
+
+    .card {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 18px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      width: 100%;
+    }
+    .card-title {
+      font-size: 1.05rem;
+      font-weight: 600;
+      color: #93c5fd;
+      border-bottom: 1px solid var(--border);
+      padding-bottom: 10px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    /* Tables */
+    .table-container { width: 100%; overflow-x: auto; -webkit-overflow-scrolling: touch; border-radius: 6px; }
+    table { width: 100%; border-collapse: collapse; font-size: 0.82rem; min-width: 480px; }
+    th, td { text-align: left; padding: 9px 12px; border-bottom: 1px solid var(--border); white-space: nowrap; }
+    th { color: var(--text-muted); font-weight: 600; background: #0f172a; }
+    .badge-lang { padding: 3px 8px; border-radius: 12px; font-size: 0.72rem; font-weight: 600; }
+    .badge-go { background: rgba(0, 172, 215, 0.2); color: #00add8; }
+    .badge-py { background: rgba(255, 212, 59, 0.2); color: #ffd43b; }
+    .badge-cpp { background: rgba(0, 89, 156, 0.2); color: #659ad2; }
+    .badge-rust { background: rgba(222, 165, 132, 0.2); color: #dea584; }
+    .badge-java { background: rgba(234, 45, 46, 0.2); color: #f87171; }
+
+    /* Event Stream */
+    .event-stream {
+      height: 280px;
+      overflow-y: auto;
+      background: #0f172a;
+      border-radius: 8px;
+      border: 1px solid var(--border);
+      padding: 10px 14px;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-family: monospace;
+      font-size: 0.8rem;
+    }
+    .event-item {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 4px 6px;
+      border-radius: 4px;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      flex-wrap: wrap;
+    }
+    .ev-time { color: #64748b; font-size: 0.75rem; min-width: 65px; }
+    .ev-badge {
+      padding: 2px 8px;
+      border-radius: 4px;
+      font-size: 0.7rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.4px;
+    }
+    .ev-dispatch { background: rgba(16, 185, 129, 0.2); color: #34d399; }
+    .ev-worker { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+    .ev-client { background: rgba(168, 85, 247, 0.2); color: #c084fc; }
+    .ev-success { background: rgba(59, 130, 246, 0.2); color: #60a5fa; }
+    .ev-error { background: rgba(239, 68, 68, 0.2); color: #f87171; }
+    .ev-system { background: rgba(148, 163, 184, 0.2); color: #cbd5e1; }
+    .ev-client-tag { color: #93c5fd; font-weight: 600; min-width: 90px; }
+    .ev-details { color: #e2e8f0; flex: 1; word-break: break-word; }
+
+    .btn-secondary {
+      background: #1e293b;
+      color: #f8fafc;
+      border: 1px solid var(--border);
+      padding: 6px 12px;
+      border-radius: 6px;
+      font-size: 0.78rem;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+    .btn-secondary:hover { background: #334155; }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <header>
+      <div class="title-group">
+        <h1>Open AI Cubes | Cluster Administration Console</h1>
+        <p>Real-time distributed telemetry, worker node assignment, and client auditing</p>
+      </div>
+      <div class="header-actions">
+        <div class="status-badge" id="adminStatusBadge">
+          <div class="status-dot"></div>
+          <span id="adminStatusText">Connected</span>
+        </div>
+        <a href="index.html" class="btn-nav">← Client Workspace</a>
+      </div>
+    </header>
+
+    <!-- KPI Grid -->
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-title">Total Inferences Handled</div>
+        <div class="kpi-value kpi-blue" id="kpiTotalRequests">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Active Worker Cubes</div>
+        <div class="kpi-value kpi-green" id="kpiActiveWorkers">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Active Client Sessions</div>
+        <div class="kpi-value kpi-purple" id="kpiActiveClients">0</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-title">Cluster Uptime</div>
+        <div class="kpi-value kpi-amber" id="kpiUptime">0s</div>
+      </div>
+    </div>
+
+    <!-- Cluster Execution Mode Selector Bar -->
+    <div class="mode-bar">
+      <div class="mode-label">
+        <span>Execution Mode:</span>
+        <span style="color: #34d399; font-weight: 700; margin-left: 6px;" id="currentModeLabel">PARALLEL_DISTRIBUTED</span>
+      </div>
+      <div class="mode-buttons">
+        <button class="btn-mode active" id="btnModePD" onclick="setMode('PARALLEL_DISTRIBUTED')">Parallel Distributed</button>
+        <button class="btn-mode" id="btnModeD" onclick="setMode('DISTRIBUTED')">Distributed</button>
+        <button class="btn-mode" id="btnModeP" onclick="setMode('PARALLEL')">Parallel Multi-Core</button>
+        <button class="btn-mode" id="btnModeS" onclick="setMode('SEQUENTIAL')">Sequential</button>
+      </div>
+    </div>
+
+    <!-- Main Grid: Top (Workers & Clients) -->
+    <div class="grid-2">
+      <!-- Worker Nodes Card -->
+      <div class="card">
+        <div class="card-title">
+          <span>Worker Nodes & Completed Task Metrics</span>
+          <span style="font-size: 0.78rem; color: var(--text-muted);" id="workerNodeCount">0 Cubes</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Cube ID</th>
+                <th>Language</th>
+                <th>Threads</th>
+                <th>Completed Tasks</th>
+                <th>Status</th>
+              </tr>
+            </thead>
+            <tbody id="workersTableBody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">Querying worker metrics...</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Active Clients Card -->
+      <div class="card">
+        <div class="card-title">
+          <span>Active Client Sessions (Multi-Client Concurrency)</span>
+          <span style="font-size: 0.78rem; color: var(--text-muted);" id="clientSessionCount">0 Clients</span>
+        </div>
+        <div class="table-container">
+          <table>
+            <thead>
+              <tr>
+                <th>Client ID</th>
+                <th>Origin / Address</th>
+                <th>Inferences</th>
+                <th>Last Result</th>
+                <th>Latency</th>
+              </tr>
+            </thead>
+            <tbody id="clientsTableBody">
+              <tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No active client sessions</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+
+    <!-- Full-Width Live Event Stream Card -->
+    <div class="card">
+      <div class="card-title">
+        <span>Live Dispatch & Cluster Audit Event Log</span>
+        <button class="btn-secondary" onclick="clearEventLogs()">Clear Log Buffer</button>
+      </div>
+      <div class="event-stream" id="eventStreamBox">
+        <div class="event-item">
+          <span class="ev-time">--:--:--</span>
+          <span class="ev-badge ev-system">SYSTEM</span>
+          <span class="ev-client-tag">Cluster</span>
+          <span class="ev-details">Listening for real-time cluster events...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    function getApiBase() {
+      const saved = localStorage.getItem('open_ai_cubes_api_base');
+      if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
+      if (window.location.origin.includes('open-ai-cubes-frontend')) {
+        return 'https://open-ai-cubes-backend.onrender.com';
+      }
+      return window.location.origin.includes('http') ? window.location.origin.replace(/\/+$/, '') : 'http://localhost:8080';
+    }
+
+    async function pollAdminOverview() {
+      const base = getApiBase();
+      try {
+        const res = await fetch(`${base}/api/admin/overview`);
+        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        const data = await res.json();
+
+        // Update KPIs
+        document.getElementById('kpiTotalRequests').textContent = data.total_requests || 0;
+        document.getElementById('kpiActiveWorkers').textContent = data.workers ? data.workers.length : 0;
+        document.getElementById('kpiActiveClients').textContent = data.clients ? data.clients.length : 0;
+
+        const uptime = data.uptime_seconds || 0;
+        const hrs = Math.floor(uptime / 3600);
+        const mins = Math.floor((uptime % 3600) / 60);
+        const secs = uptime % 60;
+        document.getElementById('kpiUptime').textContent = `${hrs}h ${mins}m ${secs}s`;
+
+        // Update mode label & active buttons
+        const mode = data.mode || 'PARALLEL_DISTRIBUTED';
+        document.getElementById('currentModeLabel').textContent = mode;
+        updateModeButtonActive(mode);
+
+        // Update Workers Table
+        updateWorkersTable(data.workers || []);
+
+        // Update Clients Table
+        updateClientsTable(data.clients || []);
+
+        // Update Event Log
+        updateEventsStream(data.events || []);
+
+        document.getElementById('adminStatusBadge').style.background = 'rgba(16, 185, 129, 0.15)';
+        document.getElementById('adminStatusBadge').style.color = '#34d399';
+        document.getElementById('adminStatusText').textContent = 'Connected';
+      } catch (err) {
+        document.getElementById('adminStatusBadge').style.background = 'rgba(239, 68, 68, 0.15)';
+        document.getElementById('adminStatusBadge').style.color = '#f87171';
+        document.getElementById('adminStatusText').textContent = 'Offline';
+      }
+    }
+
+    function updateModeButtonActive(mode) {
+      document.querySelectorAll('.btn-mode').forEach(b => b.classList.remove('active'));
+      if (mode === 'PARALLEL_DISTRIBUTED') document.getElementById('btnModePD').classList.add('active');
+      else if (mode === 'DISTRIBUTED') document.getElementById('btnModeD').classList.add('active');
+      else if (mode === 'PARALLEL') document.getElementById('btnModeP').classList.add('active');
+      else if (mode === 'SEQUENTIAL') document.getElementById('btnModeS').classList.add('active');
+    }
+
+    function updateWorkersTable(workers) {
+      const tbody = document.getElementById('workersTableBody');
+      tbody.innerHTML = '';
+      document.getElementById('workerNodeCount').textContent = `${workers.length} Cubes`;
+      if (workers.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No worker nodes active</td></tr>';
+        return;
+      }
+      workers.forEach(w => {
+        const tr = document.createElement('tr');
+        const langClass = `badge-${w.language.toLowerCase().replace(/[^a-z]/g, '')}`;
+        tr.innerHTML = `
+          <td><strong>${w.id}</strong></td>
+          <td><span class="badge-lang ${langClass}">${w.language}</span></td>
+          <td>${w.threads} threads</td>
+          <td><span style="color: #60a5fa; font-weight: 700;">${w.completed_tasks}</span></td>
+          <td><span style="color: ${w.status === 'ACTIVE' ? '#34d399' : '#94a3b8'}; font-weight: 600;">${w.status}</span></td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateClientsTable(clients) {
+      const tbody = document.getElementById('clientsTableBody');
+      tbody.innerHTML = '';
+      document.getElementById('clientSessionCount').textContent = `${clients.length} Clients`;
+      if (clients.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: var(--text-muted);">No active client sessions</td></tr>';
+        return;
+      }
+      clients.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.innerHTML = `
+          <td><strong style="color: #c084fc;">${c.client_id}</strong></td>
+          <td style="color: var(--text-muted);">${c.remote_address}</td>
+          <td><span style="color: #38bdf8; font-weight: 700;">${c.total_inferences}</span></td>
+          <td>${c.last_prediction || 'None'}</td>
+          <td>${c.last_latency_ms ? c.last_latency_ms.toFixed(2) + ' ms' : '--'}</td>
+        `;
+        tbody.appendChild(tr);
+      });
+    }
+
+    function updateEventsStream(events) {
+      const box = document.getElementById('eventStreamBox');
+      box.innerHTML = '';
+      if (events.length === 0) {
+        box.innerHTML = '<div class="event-item"><span class="ev-details" style="color: var(--text-muted);">No recent events recorded</span></div>';
+        return;
+      }
+      events.forEach(ev => {
+        const div = document.createElement('div');
+        div.className = 'event-item';
+        let badgeClass = 'ev-system';
+        if (ev.type === 'DISPATCH') badgeClass = 'ev-dispatch';
+        else if (ev.type === 'WORKER') badgeClass = 'ev-worker';
+        else if (ev.type === 'CLIENT') badgeClass = 'ev-client';
+        else if (ev.type === 'SUCCESS') badgeClass = 'ev-success';
+        else if (ev.type === 'ERROR') badgeClass = 'ev-error';
+
+        div.innerHTML = `
+          <span class="ev-time">${ev.time_str}</span>
+          <span class="ev-badge ${badgeClass}">${ev.type}</span>
+          <span class="ev-client-tag">${ev.client_id}</span>
+          <span class="ev-details">${ev.details}</span>
+        `;
+        box.appendChild(div);
+      });
+    }
+
+    async function setMode(mode) {
+      const base = getApiBase();
+      try {
+        const res = await fetch(`${base}/api/admin/mode`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain' },
+          body: mode
+        });
+        if (res.ok) {
+          document.getElementById('currentModeLabel').textContent = mode;
+          updateModeButtonActive(mode);
+          pollAdminOverview();
+        }
+      } catch (err) {
+        alert('Failed setting mode: ' + err.message);
+      }
+    }
+
+    async function clearEventLogs() {
+      const base = getApiBase();
+      try {
+        await fetch(`${base}/api/admin/clear-logs`, { method: 'POST' });
+        pollAdminOverview();
+      } catch (err) {
+        alert('Failed clearing logs: ' + err.message);
+      }
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      pollAdminOverview();
+      setInterval(pollAdminOverview, 1500);
+    });
+  </script>
+</body>
+</html>

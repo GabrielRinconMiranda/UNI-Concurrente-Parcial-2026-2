@@ -25,6 +25,8 @@ public class WorkerNodeSession {
     private final BufferedWriter writer;
     private final String httpBaseUrl;
     private final AtomicInteger activeTaskCount = new AtomicInteger(0);
+    private final java.util.concurrent.atomic.AtomicLong completedTasks = new java.util.concurrent.atomic.AtomicLong(0);
+    private volatile long lastActiveTime = System.currentTimeMillis();
 
     public WorkerNodeSession(String workerId, String language, int maxThreads, String capabilities, Socket socket) throws IOException {
         this.workerId = workerId;
@@ -68,6 +70,18 @@ public class WorkerNodeSession {
         return activeTaskCount.get();
     }
 
+    public long getCompletedTasks() {
+        return completedTasks.get();
+    }
+
+    public long getLastActiveTime() {
+        return lastActiveTime;
+    }
+
+    public String getHttpBaseUrl() {
+        return (httpBaseUrl != null) ? httpBaseUrl : "tcp://localhost";
+    }
+
     public boolean isConnected() {
         if (httpBaseUrl != null) return true;
         return socket != null && !socket.isClosed() && socket.isConnected();
@@ -90,6 +104,8 @@ public class WorkerNodeSession {
                 }
                 String resp = httpPost(httpBaseUrl + endpoint, request.getPayload());
                 String respAction = action.replace("_REQ", "_RESP");
+                completedTasks.incrementAndGet();
+                lastActiveTime = System.currentTimeMillis();
                 return new ProtocolMessage(respAction, request.getId(), resp);
             }
 
@@ -100,6 +116,8 @@ public class WorkerNodeSession {
             if (responseLine == null) {
                 throw new IOException("Worker disconnected during task: " + workerId);
             }
+            completedTasks.incrementAndGet();
+            lastActiveTime = System.currentTimeMillis();
             return ProtocolMessage.parse(responseLine);
         } finally {
             activeTaskCount.decrementAndGet();

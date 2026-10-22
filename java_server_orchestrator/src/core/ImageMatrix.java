@@ -210,6 +210,6 @@ public class ImageMatrix {
                 throw new RuntimeException("Error cargando fotografia real para " + norm + ": " + ex.getMessage(), ex);
             }
         }
-        throw new IllegalStateException("Fotografia real no encontrada en dataset/real/test/" + norm);
+        throw new IllegalStateException("Sample image not found in dataset/real/test/" + norm);
     }
 }

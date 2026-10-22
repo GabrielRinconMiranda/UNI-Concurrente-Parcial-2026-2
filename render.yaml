@@ -1,5 +1,5 @@
 services:
-  # 1. Servidor Backend Central (Java Orchestrator + API REST + Web Dashboard)
+  # 1. Central Backend Server (Java Orchestrator + REST API + Admin Console)
   - type: web
     name: open-ai-cubes-backend
     runtime: docker
@@ -9,8 +9,10 @@ services:
     envVars:
       - key: PORT
         value: 8080
+      - key: CLOUD_WORKERS
+        value: "https://open-ai-cubes-go-worker.onrender.com,https://open-ai-cubes-python-worker.onrender.com,https://open-ai-cubes-cpp-worker.onrender.com,https://open-ai-cubes-rust-worker.onrender.com,https://open-ai-cubes-java-worker.onrender.com"
 
-  # 2. Cubo de Cómputo Go (Microcubo Convolucional / MLP)
+  # 2. Go Worker Cube (Convolutional & MLP Inference)
   - type: web
     name: open-ai-cubes-go-worker
     runtime: go
@@ -19,7 +21,7 @@ services:
     buildCommand: go build -o worker_cube worker_cube.go micro_chunks.go
     startCommand: ./worker_cube --http
 
-  # 3. Cubo de Cómputo Python (Microcubo Convolucional / MLP)
+  # 3. Python Worker Cube (Convolutional & MLP Inference)
   - type: web
     name: open-ai-cubes-python-worker
     runtime: python
@@ -28,7 +30,7 @@ services:
     buildCommand: echo "Python worker ready"
     startCommand: python worker_cube.py --http
 
-  # 4. Cubo de Cómputo C++ con OpenMP (Microcubo Convolucional / MLP)
+  # 4. C++ Worker Cube with OpenMP (Convolutional & MLP Inference)
   - type: web
     name: open-ai-cubes-cpp-worker
     runtime: docker
@@ -39,7 +41,7 @@ services:
       - key: PORT
         value: 8080
 
-  # 5. Cubo de Cómputo Rust (Microcubo Convolucional / MLP)
+  # 5. Rust Worker Cube (Convolutional & MLP Inference)
   - type: web
     name: open-ai-cubes-rust-worker
     runtime: rust
@@ -48,7 +50,7 @@ services:
     buildCommand: cargo build --release
     startCommand: ./target/release/rust_worker_cube --http
 
-  # 6. Cubo de Cómputo Java Independiente (Microcubo Convolucional / MLP)
+  # 6. Java Worker Cube (Convolutional & MLP Inference)
   - type: web
     name: open-ai-cubes-java-worker
     runtime: docker
@@ -59,7 +61,7 @@ services:
       - key: PORT
         value: 8080
 
-  # 7. Frontend Web Estático (CDN Global de Alta Velocidad)
+  # 7. Static Frontend (Global Edge CDN)
   - type: web
     name: open-ai-cubes-frontend
     runtime: static

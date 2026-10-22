@@ -1,7 +1,7 @@
 package server;
 
 /**
- * ExecutionMode: Defines the 4 computational execution modes required by the rubric.
+ * ExecutionMode: Defines the four computational execution modes of the architecture.
  */
 public enum ExecutionMode {
     SEQUENTIAL("Sequential (1 Process, 1 Thread)"),

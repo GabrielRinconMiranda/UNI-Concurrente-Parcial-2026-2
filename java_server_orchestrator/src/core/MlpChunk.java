@@ -175,17 +175,17 @@ public class MlpChunk {
             } catch (Exception ignored) {}
         }
 
-        // 3. Auto-train from real directory (100% real photographic dataset)
+        // 3. Auto-train from training images
         File trainDir = new File("dataset/real/train");
         if (!trainDir.exists()) trainDir = new File("../dataset/real/train");
         if (trainDir.exists() && trainFromRealDirectory(trainDir)) {
             isRealDatasetLoaded = true;
-            System.out.println("[MlpChunk] Real photography weights initialized successfully.");
+            System.out.println("[MlpChunk] Model prototype weights initialized successfully.");
             return;
         }
 
         isRealDatasetLoaded = true;
-        System.out.println("[MlpChunk] Real dataset active.");
+        System.out.println("[MlpChunk] Classification model ready.");
     }
 
     private static boolean trainFromRealDirectory(File trainDir) {

@@ -80,10 +80,10 @@ fi
 TOTAL_CPUS=$(nproc 2>/dev/null || echo 8)
 if [ "$USE_TASKSET" = true ]; then
     WORKER_THREADS=2
-    echo "[Cluster] Modo simulado activo: núcleos particionados vía taskset (hilos por worker: $WORKER_THREADS)."
+    echo "[Cluster] Core isolation active via taskset (threads per worker: $WORKER_THREADS)."
 else
     WORKER_THREADS="$TOTAL_CPUS"
-    echo "[Cluster] Modo real activo: sin restricción de núcleos (hilos por worker: $WORKER_THREADS)."
+    echo "[Cluster] Unrestricted multi-core execution (threads per worker: $WORKER_THREADS)."
 fi
 
 # Helper to run with optional taskset and SIGHUP immunity
@@ -145,10 +145,10 @@ echo "[Cluster] All cluster nodes are online and registered."
 
 # 7. Start Desktop GUI if requested
 if [ "$LAUNCH_GUI" = true ]; then
-    echo "[Cluster] Launching Desktop GUI Client (idClientChat: 0812)..."
+    echo "[Cluster] Launching Desktop GUI Client..."
     cd "$ROOT_DIR/java_server_orchestrator"
     trap 'echo "[Cluster] GUI closed, stopping cluster..."; bash "$SCRIPT_DIR/stop_cluster.sh" >/dev/null 2>&1' EXIT INT TERM
-    java -cp bin client.DesktopChatGui 0812 127.0.0.1 "$CLIENT_PORT"
+    java -cp bin client.DesktopChatGui "" 127.0.0.1 "$CLIENT_PORT"
 else
     echo "[Cluster] Cluster running in background. Use '$SCRIPT_DIR/stop_cluster.sh' to stop."
 fi
