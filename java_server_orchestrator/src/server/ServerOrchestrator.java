@@ -46,7 +46,7 @@ public class ServerOrchestrator {
     private final AtomicBoolean running = new AtomicBoolean(false);
 
     private volatile ExecutionMode currentMode = ExecutionMode.PARALLEL;
-    private final ExecutorService localThreadPool = Executors.newFixedThreadPool(Runtime.getRuntime().availableProcessors());
+    private final ExecutorService localThreadPool = Executors.newFixedThreadPool(Math.max(4, Runtime.getRuntime().availableProcessors() * 2));
     private final Object sequentialLock = new Object();
     private final Object distributedLock = new Object();
 
@@ -137,10 +137,11 @@ public class ServerOrchestrator {
                     break;
 
                 case PARALLEL:
-                    // Multi-threaded local thread pool
-                    Future<MlpChunk.Prediction> future = localThreadPool.submit(() -> CnnInferenceEngine.infer(image));
-                    pred = future.get();
-                    handlerInfo = "Núcleo local: paralelismo multinúcleo (" + Runtime.getRuntime().availableProcessors() + " hilos)";
+                    // Multi-threaded parallel convolution across spatial filters
+                    int cores = Math.max(2, Runtime.getRuntime().availableProcessors());
+                    float[] features = ConvolutionChunk.process(image, cores);
+                    pred = MlpChunk.process(features);
+                    handlerInfo = "Núcleo local: paralelismo multinúcleo (" + cores + " hilos convolucionales)";
                     break;
 
                 case DISTRIBUTED:
@@ -181,43 +182,50 @@ public class ServerOrchestrator {
             return new InferenceExecutionResult(pred, info);
         }
 
-        if (workers.size() >= 2) {
-            WorkerNodeSession convWorker = registry.acquireWorker();
-            WorkerNodeSession mlpWorker = registry.acquireWorkerExcluding(convWorker);
+        try {
+            if (workers.size() >= 2) {
+                WorkerNodeSession convWorker = registry.acquireWorker();
+                WorkerNodeSession mlpWorker = registry.acquireWorkerExcluding(convWorker);
 
-            ProtocolMessage convReq = new ProtocolMessage(
-                    ProtocolConstants.CMD_CONV_REQ,
-                    taskId,
-                    image.toCsvString()
-            );
-            ProtocolMessage convResp = convWorker.sendAndReceive(convReq);
-            float[] features = ConvolutionChunk.featuresFromString(convResp.getPayload());
+                ProtocolMessage convReq = new ProtocolMessage(
+                        ProtocolConstants.CMD_CONV_REQ,
+                        taskId,
+                        image.toCsvString()
+                );
+                ProtocolMessage convResp = convWorker.sendAndReceive(convReq);
+                float[] features = ConvolutionChunk.featuresFromString(convResp.getPayload());
 
-            ProtocolMessage mlpReq = new ProtocolMessage(
-                    ProtocolConstants.CMD_MLP_REQ,
-                    taskId,
-                    ConvolutionChunk.featuresToString(features)
-            );
-            ProtocolMessage mlpResp = mlpWorker.sendAndReceive(mlpReq);
-            MlpChunk.Prediction pred = MlpChunk.parseProtocolString(mlpResp.getPayload());
+                ProtocolMessage mlpReq = new ProtocolMessage(
+                        ProtocolConstants.CMD_MLP_REQ,
+                        taskId,
+                        ConvolutionChunk.featuresToString(features)
+                );
+                ProtocolMessage mlpResp = mlpWorker.sendAndReceive(mlpReq);
+                MlpChunk.Prediction pred = MlpChunk.parseProtocolString(mlpResp.getPayload());
 
-            String modeLabel = isParallelDistributed ? "Distribuido paralelo concurrente" : "Distribuido secuencial";
-            String info = modeLabel + ": conv[" + convWorker.getWorkerId() + "/" + convWorker.getLanguage()
-                    + " (" + convWorker.getMaxThreads() + " hilos)] -> mlp[" + mlpWorker.getWorkerId() + "/"
-                    + mlpWorker.getLanguage() + " (" + mlpWorker.getMaxThreads() + " hilos)]";
-            return new InferenceExecutionResult(pred, info);
-        } else {
-            WorkerNodeSession worker = registry.acquireWorker();
-            ProtocolMessage inferReq = new ProtocolMessage(
-                    ProtocolConstants.CMD_INFER_REQ,
-                    taskId,
-                    image.getLabel() + "|" + image.toCsvString()
-            );
-            ProtocolMessage resp = worker.sendAndReceive(inferReq);
-            MlpChunk.Prediction pred = MlpChunk.parseProtocolString(resp.getPayload());
-            String modeLabel = isParallelDistributed ? "Distribuido paralelo" : "Distribuido secuencial";
-            String info = modeLabel + " (nodo único): " + worker.getWorkerId() + " [" + worker.getLanguage()
-                    + ", " + worker.getMaxThreads() + " hilos]";
+                String modeLabel = isParallelDistributed ? "Distribuido paralelo concurrente" : "Distribuido secuencial";
+                String info = modeLabel + ": conv[" + convWorker.getWorkerId() + "/" + convWorker.getLanguage()
+                        + " (" + convWorker.getMaxThreads() + " hilos)] -> mlp[" + mlpWorker.getWorkerId() + "/"
+                        + mlpWorker.getLanguage() + " (" + mlpWorker.getMaxThreads() + " hilos)]";
+                return new InferenceExecutionResult(pred, info);
+            } else {
+                WorkerNodeSession worker = registry.acquireWorker();
+                ProtocolMessage inferReq = new ProtocolMessage(
+                        ProtocolConstants.CMD_INFER_REQ,
+                        taskId,
+                        image.getLabel() + "|" + image.toCsvString()
+                );
+                ProtocolMessage resp = worker.sendAndReceive(inferReq);
+                MlpChunk.Prediction pred = MlpChunk.parseProtocolString(resp.getPayload());
+                String modeLabel = isParallelDistributed ? "Distribuido paralelo" : "Distribuido secuencial";
+                String info = modeLabel + " (nodo único): " + worker.getWorkerId() + " [" + worker.getLanguage()
+                        + ", " + worker.getMaxThreads() + " hilos]";
+                return new InferenceExecutionResult(pred, info);
+            }
+        } catch (Exception e) {
+            System.err.println("[Server] Error en microcubo distribuido (" + e.getMessage() + "), activando respaldo local.");
+            MlpChunk.Prediction pred = CnnInferenceEngine.infer(image);
+            String info = "Respaldo local automático (microcubo remoto inaccesible: " + e.getMessage() + ")";
             return new InferenceExecutionResult(pred, info);
         }
     }
@@ -316,7 +324,7 @@ public class ServerOrchestrator {
             httpServer.createContext("/dataset/image", this::handleHttpDatasetImage);
             httpServer.createContext("/dataset/samples", this::handleHttpDatasetSamples);
             httpServer.createContext("/", this::handleHttpRoot);
-            httpServer.setExecutor(localThreadPool);
+            httpServer.setExecutor(Executors.newCachedThreadPool());
             httpServer.start();
             System.out.println("[Server] HTTP REST API listener online: http://0.0.0.0:" + httpPort);
 
@@ -327,11 +335,18 @@ public class ServerOrchestrator {
                 for (int i = 0; i < urls.length; i++) {
                     String u = urls[i].trim();
                     if (!u.isEmpty()) {
-                        String lang = u.toLowerCase().contains("go") ? "Go" : (u.toLowerCase().contains("py") ? "Python" : "CloudNode");
-                        String id = "node_" + lang.toLowerCase() + "_render_" + (i + 1);
+                        String lower = u.toLowerCase();
+                        String lang = "CloudNode";
+                        if (lower.contains("go")) lang = "Go";
+                        else if (lower.contains("python") || lower.contains("py")) lang = "Python";
+                        else if (lower.contains("rust")) lang = "Rust";
+                        else if (lower.contains("cpp") || lower.contains("c++")) lang = "C++";
+                        else if (lower.contains("java")) lang = "Java";
+
+                        String id = "node_" + lang.toLowerCase().replaceAll("[^a-z0-9]", "") + "_render_" + (i + 1);
                         WorkerNodeSession ws = new WorkerNodeSession(id, lang, 4, "CONV,MLP", u);
                         registry.register(ws);
-                        System.out.println("[Server] Registered Cloud HTTP Worker from ENV: " + id + " -> " + u);
+                        System.out.println("[Server] Registered Cloud HTTP Worker from ENV: " + id + " (" + lang + ") -> " + u);
                     }
                 }
             }
