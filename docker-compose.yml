@@ -1,5 +1,5 @@
-# Open AI Cubes: Cluster contenerizado heterogeneo
-# Uso opcional para pruebas locales: docker compose up --build
+# Open AI Cubes: Unified Multi-Node Cluster via Docker Compose
+# Usage: docker compose up --build -d
 
 services:
   orchestrator:
@@ -7,9 +7,10 @@ services:
     container_name: openai_orchestrator
     ports:
       - "8080:8080"
+      - "8085:8085"
       - "9010:9010"
     command: >
-      bash -c "cd /workspace/java_server_orchestrator && java -cp bin server.ServerOrchestrator 9010 8080"
+      bash -c "cd /workspace/java_server_orchestrator && java -cp bin server.ServerOrchestrator 9010 8085 8080"
 
   worker-java:
     build: .
@@ -38,6 +39,15 @@ services:
     command: >
       bash -c "sleep 1 && cd /workspace/cpp_worker_cube && ./worker_cube node_cpp_docker orchestrator 9010 4"
 
+  worker-rust:
+    build: .
+    container_name: openai_worker_rust
+    depends_on:
+      - orchestrator
+    restart: on-failure
+    command: >
+      bash -c "sleep 1 && cd /workspace/rust_worker_cube && ./rust_worker_bin node_rust_docker orchestrator 9010 4"
+
   worker-go:
     build: .
     container_name: openai_worker_go
@@ -46,4 +56,3 @@ services:
     restart: on-failure
     command: >
       bash -c "sleep 1 && cd /workspace/go_worker_cube && ./worker_cube node_go_docker orchestrator 9010 4"
-

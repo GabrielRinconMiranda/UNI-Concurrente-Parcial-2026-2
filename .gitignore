@@ -1,0 +1,36 @@
+# Byte-compiled / runtime files
+__pycache__/
+*.py[cod]
+*$py.class
+*.class
+
+# Binaries and compiled targets
+bin/
+target/
+*.o
+*.obj
+*.exe
+*.dll
+*.so
+*.dylib
+cpp_worker_cube/worker_cube
+go_worker_cube/worker_cube
+rust_worker_cube/rust_worker_bin
+rust_worker_cube/target/
+java_server_orchestrator/bin/
+
+# Temporary files and logs
+.DS_Store
+Thumbs.db
+.cluster_pids
+*.log
+/tmp/openai*
+
+# Media showcase (omitted from git repo as requested; included in final zip)
+media/
+*.mp4
+
+# Typst project sources (only compiled PDF deliverables are kept in git docs/)
+docs/*.typ
+docs/figures/
+docs/recursos/
