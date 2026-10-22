@@ -34,3 +34,9 @@ media/
 docs/*.typ
 docs/figures/
 docs/recursos/
+
+# Presentation speech cue cards and archives (local use only)
+EXPOSICION_SPEECH*
+*.zip
+
+
