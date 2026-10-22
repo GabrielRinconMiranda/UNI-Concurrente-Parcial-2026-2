@@ -223,18 +223,7 @@ public class ServerOrchestrator {
     }
 
     public static ImageMatrix getSampleImage(String className) {
-        String norm = (className != null) ? className.toLowerCase().trim() : "unknown";
-        File dir = new File("dataset/real/test/" + norm);
-        if (!dir.exists()) dir = new File("../dataset/real/test/" + norm);
-        File[] photos = (dir.exists() && dir.isDirectory())
-                ? dir.listFiles((d, n) -> n.toLowerCase().endsWith(".jpg") || n.toLowerCase().endsWith(".jpeg"))
-                : null;
-        if (photos != null && photos.length > 0) {
-            Arrays.sort(photos, Comparator.comparing(File::getName));
-            try {
-                return ImageMatrix.fromFile(photos[0], norm);
-            } catch (Exception ignored) {}
-        }
+        String norm = (className != null && !className.trim().isEmpty()) ? className.toLowerCase().trim() : "panda";
         return ImageMatrix.createSample(norm);
     }
 
@@ -430,6 +419,16 @@ public class ServerOrchestrator {
                     ProtocolMessage reply = new ProtocolMessage(ProtocolConstants.CMD_CLIENT_RESP, msg.getId(), respPayload);
                     writer.write(reply.toWireString());
                     writer.flush();
+
+                } else if ("SET_MODE".equals(msg.getAction())) {
+                    String modeStr = msg.getPayload().trim();
+                    try {
+                        ExecutionMode m = ExecutionMode.valueOf(modeStr.toUpperCase());
+                        setExecutionMode(m);
+                        ProtocolMessage reply = new ProtocolMessage("SET_MODE_ACK", msg.getId(), m.name());
+                        writer.write(reply.toWireString());
+                        writer.flush();
+                    } catch (Exception ignored) {}
 
                 } else if (ProtocolConstants.CMD_GET_WORKERS.equals(msg.getAction())) {
                     List<WorkerNodeSession> allWorkers = registry.getAllConnectedWorkers();

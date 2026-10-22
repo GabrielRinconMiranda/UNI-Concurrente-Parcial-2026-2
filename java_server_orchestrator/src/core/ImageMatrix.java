@@ -191,84 +191,24 @@ public class ImageMatrix {
     }
 
     /**
-     * Generates a canonical 28x28 synthetic image pattern for a known class.
+     * Loads the real photograph sample from the official dataset directory (dataset/real/test/<className>/).
+     * Exclusively uses genuine photography (zero synthetic mock data).
      */
     public static ImageMatrix createSample(String className) {
-        float[] p = new float[TOTAL_PIXELS];
-        String norm = (className != null) ? className.toLowerCase().trim() : "unknown";
-
-        switch (norm) {
-            case "panda":
-                // Dark patches around eyes (rows 6-11, cols 6-9 and 18-21)
-                setBlock(p, 6, 6, 4, 6, 1.0f);
-                setBlock(p, 18, 6, 4, 6, 1.0f);
-                // Dark ears (rows 0-3, cols 2-7 and 20-25)
-                setBlock(p, 2, 0, 6, 4, 1.0f);
-                setBlock(p, 20, 0, 6, 4, 1.0f);
-                // Nose and mouth
-                setBlock(p, 12, 16, 4, 4, 1.0f);
-                break;
-            case "cat":
-                // Pointed ears at top
-                for (int i = 0; i < 4; i++) {
-                    p[i * WIDTH + (4 + i)] = 1.0f;
-                    p[i * WIDTH + (23 - i)] = 1.0f;
-                }
-                setBlock(p, 4, 2, 4, 3, 1.0f);
-                setBlock(p, 20, 2, 4, 3, 1.0f);
-                // Horizontal whiskers
-                setBlock(p, 2, 12, 8, 2, 1.0f);
-                setBlock(p, 18, 12, 8, 2, 1.0f);
-                // Eyes
-                setBlock(p, 8, 10, 3, 2, 1.0f);
-                setBlock(p, 17, 10, 3, 2, 1.0f);
-                break;
-            case "dog":
-                // Floppy side ears
-                setBlock(p, 0, 6, 5, 10, 1.0f);
-                setBlock(p, 23, 6, 5, 10, 1.0f);
-                // Snout in middle
-                setBlock(p, 10, 14, 8, 6, 1.0f);
-                // Eyes
-                setBlock(p, 8, 8, 3, 3, 1.0f);
-                setBlock(p, 17, 8, 3, 3, 1.0f);
-                break;
-            case "bear":
-                // Round ears
-                setBlock(p, 4, 0, 6, 6, 1.0f);
-                setBlock(p, 18, 0, 6, 6, 1.0f);
-                // Broad snout
-                setBlock(p, 8, 12, 12, 8, 1.0f);
-                break;
-            case "lion":
-                // Large outer mane border
-                for (int x = 0; x < WIDTH; x++) {
-                    p[0 * WIDTH + x] = 1.0f;
-                    p[1 * WIDTH + x] = 1.0f;
-                    p[(HEIGHT - 2) * WIDTH + x] = 1.0f;
-                    p[(HEIGHT - 1) * WIDTH + x] = 1.0f;
-                }
-                for (int y = 0; y < HEIGHT; y++) {
-                    p[y * WIDTH + 0] = 1.0f;
-                    p[y * WIDTH + 1] = 1.0f;
-                    p[y * WIDTH + (WIDTH - 2)] = 1.0f;
-                    p[y * WIDTH + (WIDTH - 1)] = 1.0f;
-                }
-                // Face center
-                setBlock(p, 10, 10, 8, 8, 0.8f);
-                break;
-            default:
-                for (int i = 0; i < TOTAL_PIXELS; i++) p[i] = 0.5f;
-                break;
-        }
-        return new ImageMatrix(p, norm);
-    }
-
-    private static void setBlock(float[] p, int startX, int startY, int w, int h, float val) {
-        for (int y = startY; y < startY + h && y < HEIGHT; y++) {
-            for (int x = startX; x < startX + w && x < WIDTH; x++) {
-                p[y * WIDTH + x] = val;
+        String norm = (className != null && !className.trim().isEmpty()) ? className.toLowerCase().trim() : "panda";
+        File dir = new File("dataset/real/test/" + norm);
+        if (!dir.exists()) dir = new File("../dataset/real/test/" + norm);
+        File[] photos = (dir.exists() && dir.isDirectory())
+                ? dir.listFiles((d, n) -> n.toLowerCase().endsWith(".jpg") || n.toLowerCase().endsWith(".jpeg"))
+                : null;
+        if (photos != null && photos.length > 0) {
+            java.util.Arrays.sort(photos, java.util.Comparator.comparing(File::getName));
+            try {
+                return fromFile(photos[0], norm);
+            } catch (Exception ex) {
+                throw new RuntimeException("Error cargando fotografia real para " + norm + ": " + ex.getMessage(), ex);
             }
         }
+        throw new IllegalStateException("Fotografia real no encontrada en dataset/real/test/" + norm);
     }
 }

@@ -52,7 +52,7 @@
 
     /* Image Preview (Real Photographic Dataset) */
     .preview-box { display: flex; align-items: center; gap: 20px; background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
-    .preview-img { width: 140px; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #334155; background: #111; }
+    .preview-img { width: 160px; height: 160px; object-fit: contain; border-radius: 8px; border: 1px solid #334155; background: #000; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.3); }
     .preview-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; flex: 1; }
 
     /* Results */
@@ -190,21 +190,6 @@
               </tr>
             </tbody>
           </table>
-        </div>
-
-        <div style="background: #0f172a; padding: 12px; border-radius: 8px; border: 1px solid var(--border);">
-          <label style="margin-bottom: 8px;">Enlazar Cubo Cloud Adicional (Render HTTP)</label>
-          <div style="display: flex; gap: 8px;">
-            <input type="text" id="cloudWorkerUrl" placeholder="https://mi-cubo.onrender.com" style="flex: 1;">
-            <select id="cloudWorkerLang" style="width: 100px;">
-              <option value="Go">Go</option>
-              <option value="Python">Python</option>
-              <option value="C++">C++</option>
-              <option value="Rust">Rust</option>
-              <option value="Java">Java</option>
-            </select>
-            <button onclick="registerCloudWorker()" style="padding: 8px 14px;">Registrar</button>
-          </div>
         </div>
 
         <!-- Chat / Dialogue Box (idClientChat 0812) -->
@@ -414,28 +399,6 @@
         log(`Modo de ejecución del clúster cambiado a: ${mode}`, 'info');
       } catch (e) {
         log(`Aviso de modo: ${e.message}`, 'error');
-      }
-    }
-
-    async function registerCloudWorker() {
-      const url = document.getElementById('cloudWorkerUrl').value.trim();
-      const lang = document.getElementById('cloudWorkerLang').value;
-      const base = getApiBase();
-      if (!url) {
-        alert('Ingrese la URL pública del cubo en Render (ej: https://open-ai-cubes-go-worker-1.onrender.com)');
-        return;
-      }
-      try {
-        const res = await fetch(`${base}/register_cloud_worker`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain' },
-          body: `node_${lang.toLowerCase()}_render|${lang}|4|${url}`
-        });
-        log(`Cubo registrado exitosamente: ${url} (${lang})`, 'success');
-        document.getElementById('cloudWorkerUrl').value = '';
-        refreshWorkers();
-      } catch (e) {
-        log(`Aviso de registro: ${e.message}`, 'error');
       }
     }
 
