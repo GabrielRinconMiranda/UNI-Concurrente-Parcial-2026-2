@@ -1,0 +1,17 @@
+services:
+  - type: web
+    name: open-ai-cubes-go-worker
+    runtime: go
+    plan: free
+    rootDir: go_worker_cube
+    buildCommand: go build -o worker_cube worker_cube.go micro_chunks.go
+    startCommand: ./worker_cube --http
+
+  - type: web
+    name: open-ai-cubes-python-worker
+    runtime: python
+    plan: free
+    rootDir: python_worker_cube
+    buildCommand: echo "Python worker ready (zero third-party dependencies)"
+    startCommand: python worker_cube.py --http
+

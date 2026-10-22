@@ -1,0 +1,307 @@
+{
+  "metadata": {
+    "date": "2026-10-20 23:16:29",
+    "total_observations": 100,
+    "cube_configurations": [
+      [
+        1,
+        [
+          "C++"
+        ]
+      ],
+      [
+        2,
+        [
+          "C++",
+          "Rust"
+        ]
+      ],
+      [
+        3,
+        [
+          "C++",
+          "Rust",
+          "Go"
+        ]
+      ],
+      [
+        4,
+        [
+          "C++",
+          "Rust",
+          "Go",
+          "Java"
+        ]
+      ],
+      [
+        5,
+        [
+          "C++",
+          "Rust",
+          "Go",
+          "Java",
+          "Python"
+        ]
+      ]
+    ],
+    "concurrency_levels": [
+      1,
+      5,
+      10,
+      20
+    ],
+    "repetitions": 5,
+    "dataset_mode": "REAL (200 fotografías en dataset/real/)",
+    "languages_evaluated": [
+      "C++",
+      "Rust",
+      "Go",
+      "Java",
+      "Python"
+    ]
+  },
+  "cluster_scaling_summary": [
+    {
+      "num_cubes": 1,
+      "cubes_list": "C++",
+      "concurrency": 1,
+      "mean_throughput": 4.79,
+      "mean_latency_ms": 208.66,
+      "mean_p95_ms": 208.66,
+      "min_latency_ms": 196.38,
+      "speedup_relative_to_k1": 1.0,
+      "parallel_efficiency": 1.0
+    },
+    {
+      "num_cubes": 1,
+      "cubes_list": "C++",
+      "concurrency": 5,
+      "mean_throughput": 8.62,
+      "mean_latency_ms": 414.97,
+      "mean_p95_ms": 578.66,
+      "min_latency_ms": 248.18,
+      "speedup_relative_to_k1": 1.0,
+      "parallel_efficiency": 1.0
+    },
+    {
+      "num_cubes": 1,
+      "cubes_list": "C++",
+      "concurrency": 10,
+      "mean_throughput": 8.48,
+      "mean_latency_ms": 802.93,
+      "mean_p95_ms": 1177.09,
+      "min_latency_ms": 414.47,
+      "speedup_relative_to_k1": 1.0,
+      "parallel_efficiency": 1.0
+    },
+    {
+      "num_cubes": 1,
+      "cubes_list": "C++",
+      "concurrency": 20,
+      "mean_throughput": 7.85,
+      "mean_latency_ms": 1703.76,
+      "mean_p95_ms": 2547.67,
+      "min_latency_ms": 802.31,
+      "speedup_relative_to_k1": 1.0,
+      "parallel_efficiency": 1.0
+    },
+    {
+      "num_cubes": 2,
+      "cubes_list": "C++,Rust",
+      "concurrency": 1,
+      "mean_throughput": 4.38,
+      "mean_latency_ms": 227.58,
+      "mean_p95_ms": 227.58,
+      "min_latency_ms": 222.22,
+      "speedup_relative_to_k1": 0.914,
+      "parallel_efficiency": 0.457
+    },
+    {
+      "num_cubes": 2,
+      "cubes_list": "C++,Rust",
+      "concurrency": 5,
+      "mean_throughput": 9.1,
+      "mean_latency_ms": 424.87,
+      "mean_p95_ms": 548.51,
+      "min_latency_ms": 269.55,
+      "speedup_relative_to_k1": 1.056,
+      "parallel_efficiency": 0.528
+    },
+    {
+      "num_cubes": 2,
+      "cubes_list": "C++,Rust",
+      "concurrency": 10,
+      "mean_throughput": 9.98,
+      "mean_latency_ms": 777.54,
+      "mean_p95_ms": 1006.4,
+      "min_latency_ms": 385.15,
+      "speedup_relative_to_k1": 1.177,
+      "parallel_efficiency": 0.588
+    },
+    {
+      "num_cubes": 2,
+      "cubes_list": "C++,Rust",
+      "concurrency": 20,
+      "mean_throughput": 9.84,
+      "mean_latency_ms": 1429.18,
+      "mean_p95_ms": 2025.15,
+      "min_latency_ms": 779.92,
+      "speedup_relative_to_k1": 1.254,
+      "parallel_efficiency": 0.627
+    },
+    {
+      "num_cubes": 3,
+      "cubes_list": "C++,Rust,Go",
+      "concurrency": 1,
+      "mean_throughput": 4.96,
+      "mean_latency_ms": 202.39,
+      "mean_p95_ms": 202.39,
+      "min_latency_ms": 182.54,
+      "speedup_relative_to_k1": 1.035,
+      "parallel_efficiency": 0.345
+    },
+    {
+      "num_cubes": 3,
+      "cubes_list": "C++,Rust,Go",
+      "concurrency": 5,
+      "mean_throughput": 12.18,
+      "mean_latency_ms": 365.18,
+      "mean_p95_ms": 411.67,
+      "min_latency_ms": 253.69,
+      "speedup_relative_to_k1": 1.413,
+      "parallel_efficiency": 0.471
+    },
+    {
+      "num_cubes": 3,
+      "cubes_list": "C++,Rust,Go",
+      "concurrency": 10,
+      "mean_throughput": 12.6,
+      "mean_latency_ms": 683.92,
+      "mean_p95_ms": 792.97,
+      "min_latency_ms": 542.97,
+      "speedup_relative_to_k1": 1.486,
+      "parallel_efficiency": 0.495
+    },
+    {
+      "num_cubes": 3,
+      "cubes_list": "C++,Rust,Go",
+      "concurrency": 20,
+      "mean_throughput": 12.31,
+      "mean_latency_ms": 1382.96,
+      "mean_p95_ms": 1619.02,
+      "min_latency_ms": 1096.83,
+      "speedup_relative_to_k1": 1.568,
+      "parallel_efficiency": 0.523
+    },
+    {
+      "num_cubes": 4,
+      "cubes_list": "C++,Rust,Go,Java",
+      "concurrency": 1,
+      "mean_throughput": 4.4,
+      "mean_latency_ms": 226.69,
+      "mean_p95_ms": 226.69,
+      "min_latency_ms": 217.7,
+      "speedup_relative_to_k1": 0.919,
+      "parallel_efficiency": 0.23
+    },
+    {
+      "num_cubes": 4,
+      "cubes_list": "C++,Rust,Go,Java",
+      "concurrency": 5,
+      "mean_throughput": 12.65,
+      "mean_latency_ms": 323.5,
+      "mean_p95_ms": 393.3,
+      "min_latency_ms": 265.01,
+      "speedup_relative_to_k1": 1.468,
+      "parallel_efficiency": 0.367
+    },
+    {
+      "num_cubes": 4,
+      "cubes_list": "C++,Rust,Go,Java",
+      "concurrency": 10,
+      "mean_throughput": 13.47,
+      "mean_latency_ms": 608.1,
+      "mean_p95_ms": 741.09,
+      "min_latency_ms": 458.82,
+      "speedup_relative_to_k1": 1.588,
+      "parallel_efficiency": 0.397
+    },
+    {
+      "num_cubes": 4,
+      "cubes_list": "C++,Rust,Go,Java",
+      "concurrency": 20,
+      "mean_throughput": 13.45,
+      "mean_latency_ms": 1143.97,
+      "mean_p95_ms": 1479.81,
+      "min_latency_ms": 793.91,
+      "speedup_relative_to_k1": 1.713,
+      "parallel_efficiency": 0.428
+    },
+    {
+      "num_cubes": 5,
+      "cubes_list": "C++,Rust,Go,Java,Python",
+      "concurrency": 1,
+      "mean_throughput": 3.81,
+      "mean_latency_ms": 347.09,
+      "mean_p95_ms": 347.09,
+      "min_latency_ms": 188.91,
+      "speedup_relative_to_k1": 0.795,
+      "parallel_efficiency": 0.159
+    },
+    {
+      "num_cubes": 5,
+      "cubes_list": "C++,Rust,Go,Java,Python",
+      "concurrency": 5,
+      "mean_throughput": 5.21,
+      "mean_latency_ms": 573.15,
+      "mean_p95_ms": 957.49,
+      "min_latency_ms": 292.13,
+      "speedup_relative_to_k1": 0.604,
+      "parallel_efficiency": 0.121
+    },
+    {
+      "num_cubes": 5,
+      "cubes_list": "C++,Rust,Go,Java,Python",
+      "concurrency": 10,
+      "mean_throughput": 5.04,
+      "mean_latency_ms": 1087.33,
+      "mean_p95_ms": 1982.86,
+      "min_latency_ms": 485.82,
+      "speedup_relative_to_k1": 0.594,
+      "parallel_efficiency": 0.119
+    },
+    {
+      "num_cubes": 5,
+      "cubes_list": "C++,Rust,Go,Java,Python",
+      "concurrency": 20,
+      "mean_throughput": 5.23,
+      "mean_latency_ms": 1991.92,
+      "mean_p95_ms": 3816.93,
+      "min_latency_ms": 1017.66,
+      "speedup_relative_to_k1": 0.666,
+      "parallel_efficiency": 0.133
+    }
+  ],
+  "language_isolation": {
+    "C++": {
+      "mean_latency_ms": 199.32,
+      "throughput_req_per_sec": 5.02
+    },
+    "Rust": {
+      "mean_latency_ms": 182.62,
+      "throughput_req_per_sec": 5.48
+    },
+    "Go": {
+      "mean_latency_ms": 172.27,
+      "throughput_req_per_sec": 5.8
+    },
+    "Java": {
+      "mean_latency_ms": 202.14,
+      "throughput_req_per_sec": 4.95
+    },
+    "Python": {
+      "mean_latency_ms": 820.79,
+      "throughput_req_per_sec": 1.22
+    }
+  }
+}

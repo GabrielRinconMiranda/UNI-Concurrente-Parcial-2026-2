@@ -1,0 +1,54 @@
+[
+  {
+    "mode": "SEQUENTIAL",
+    "total_requests": 100,
+    "success_count": 100,
+    "success_rate": 100.0,
+    "total_duration_sec": 0.21499475400196388,
+    "throughput_req_per_sec": 465.12762817964636,
+    "latency_min_ms": 0.7267700275406241,
+    "latency_mean_ms": 7.32494968076935,
+    "latency_median_ms": 1.165374502306804,
+    "latency_p95_ms": 62.56837098044343,
+    "latency_max_ms": 68.53960599983111
+  },
+  {
+    "mode": "PARALLEL",
+    "total_requests": 100,
+    "success_count": 100,
+    "success_rate": 100.0,
+    "total_duration_sec": 0.14989944899571128,
+    "throughput_req_per_sec": 667.1138597905124,
+    "latency_min_ms": 0.7090310100466013,
+    "latency_mean_ms": 1.171030240948312,
+    "latency_median_ms": 1.091796497348696,
+    "latency_p95_ms": 1.7056679935194552,
+    "latency_max_ms": 3.575672977603972
+  },
+  {
+    "mode": "DISTRIBUTED",
+    "total_requests": 100,
+    "success_count": 100,
+    "success_rate": 100.0,
+    "total_duration_sec": 0.1814401969895698,
+    "throughput_req_per_sec": 551.1457861002464,
+    "latency_min_ms": 1.4626889897044748,
+    "latency_mean_ms": 4.446794009418227,
+    "latency_median_ms": 3.0868529865983874,
+    "latency_p95_ms": 12.041084992233664,
+    "latency_max_ms": 44.32543498114683
+  },
+  {
+    "mode": "PARALLEL_DISTRIBUTED",
+    "total_requests": 100,
+    "success_count": 100,
+    "success_rate": 100.0,
+    "total_duration_sec": 0.164578864001669,
+    "throughput_req_per_sec": 607.6114366604567,
+    "latency_min_ms": 1.0132600145880133,
+    "latency_mean_ms": 1.9328726516687311,
+    "latency_median_ms": 1.8858239927794784,
+    "latency_p95_ms": 2.871251985197887,
+    "latency_max_ms": 5.175461003091186
+  }
+]
