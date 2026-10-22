@@ -8,6 +8,7 @@
 #include <fstream>
 #include <algorithm>
 #include <iomanip>
+#include <tuple>
 
 #include <omp.h>
 
