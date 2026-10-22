@@ -47,9 +47,7 @@ services:
     startCommand: python worker_cube.py --http
 
   # 6. Frontend Web Estático (Host Nube 5 - CDN Global, nunca duerme)
-  - type: static
+  - type: web
     name: open-ai-cubes-frontend
-    plan: free
-    rootDir: web
-    buildCommand: echo "Frontend static ready"
-    staticPublishPath: .
+    runtime: static
+    staticPublishPath: ./web
