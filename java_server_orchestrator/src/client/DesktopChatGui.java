@@ -33,6 +33,7 @@ public class DesktopChatGui extends JFrame {
     private Socket socket;
     private BufferedReader reader;
     private BufferedWriter writer;
+    private final Object networkLock = new Object();
 
     // UI Elements
     private JTextArea chatArea;
@@ -338,17 +339,20 @@ public class DesktopChatGui extends JFrame {
 
                 String payload = currentLoadedMatrix.getLabel() + "," + currentLoadedMatrix.toCsvString();
                 ProtocolMessage req = new ProtocolMessage(ProtocolConstants.CMD_CLIENT_REQ, clientId, payload);
-                synchronized (writer) {
-                    writer.write(req.toWireString());
-                    writer.flush();
+                ProtocolMessage resp = null;
+                synchronized (networkLock) {
+                    if (writer != null && reader != null) {
+                        writer.write(req.toWireString());
+                        writer.flush();
+                        String respLine = reader.readLine();
+                        resp = ProtocolMessage.parse(respLine);
+                    }
                 }
 
-                String respLine = reader.readLine();
-                ProtocolMessage resp = ProtocolMessage.parse(respLine);
-
+                final ProtocolMessage finalResp = resp;
                 SwingUtilities.invokeLater(() -> {
-                    if (resp != null && ProtocolConstants.CMD_CLIENT_RESP.equals(resp.getAction())) {
-                        String[] parts = resp.getPayload().split("\\|");
+                    if (finalResp != null && ProtocolConstants.CMD_CLIENT_RESP.equals(finalResp.getAction())) {
+                        String[] parts = finalResp.getPayload().split("\\|");
                         String label = parts[0];
                         String conf = (parts.length > 1) ? parts[1] : "0.0";
                         String modeUsed = (parts.length > 2) ? parts[2] : "Mode";
@@ -391,11 +395,15 @@ public class DesktopChatGui extends JFrame {
             try {
                 if (socket == null || socket.isClosed()) connectToServer();
                 ProtocolMessage req = new ProtocolMessage("SET_MODE", clientId, finalMode);
-                synchronized (writer) {
-                    writer.write(req.toWireString());
-                    writer.flush();
+                synchronized (networkLock) {
+                    if (writer != null && reader != null) {
+                        writer.write(req.toWireString());
+                        writer.flush();
+                        reader.readLine(); // Consume SET_MODE_ACK
+                    }
                 }
                 appendChat("Client: Switched cluster execution mode to " + finalMode);
+                requestWorkersUpdate();
             } catch (Exception ex) {
                 appendChat("Client: Error changing mode: " + ex.getMessage());
             }
@@ -405,24 +413,26 @@ public class DesktopChatGui extends JFrame {
     private void connectToServer() {
         new Thread(() -> {
             try {
-                socket = new Socket(serverHost, serverPort);
-                reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-                writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+                synchronized (networkLock) {
+                    socket = new Socket(serverHost, serverPort);
+                    reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+                    writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
-                // Read optional dynamic ID assignment greeting from server
-                try {
-                    socket.setSoTimeout(1500);
-                    String firstLine = reader.readLine();
-                    if (firstLine != null) {
-                        ProtocolMessage greeting = ProtocolMessage.parse(firstLine);
-                        if (greeting != null && "ASSIGN_CLIENT_ID".equals(greeting.getAction())) {
-                            this.clientId = greeting.getId();
-                            SwingUtilities.invokeLater(() -> sessionLabel.setText("Active Session: " + clientId));
+                    // Read optional dynamic ID assignment greeting from server
+                    try {
+                        socket.setSoTimeout(1500);
+                        String firstLine = reader.readLine();
+                        if (firstLine != null) {
+                            ProtocolMessage greeting = ProtocolMessage.parse(firstLine);
+                            if (greeting != null && "ASSIGN_CLIENT_ID".equals(greeting.getAction())) {
+                                this.clientId = greeting.getId();
+                                SwingUtilities.invokeLater(() -> sessionLabel.setText("Active Session: " + clientId));
+                            }
                         }
+                    } catch (Exception ignored) {
+                    } finally {
+                        socket.setSoTimeout(0);
                     }
-                } catch (Exception ignored) {
-                } finally {
-                    socket.setSoTimeout(0);
                 }
 
                 SwingUtilities.invokeLater(() -> {
@@ -444,15 +454,18 @@ public class DesktopChatGui extends JFrame {
         new Thread(() -> {
             try {
                 ProtocolMessage req = new ProtocolMessage(ProtocolConstants.CMD_GET_WORKERS, clientId, "");
-                synchronized (writer) {
-                    writer.write(req.toWireString());
-                    writer.flush();
+                ProtocolMessage resp = null;
+                synchronized (networkLock) {
+                    if (writer != null && reader != null) {
+                        writer.write(req.toWireString());
+                        writer.flush();
+                        String respLine = reader.readLine();
+                        resp = ProtocolMessage.parse(respLine);
+                    }
                 }
-
-                String respLine = reader.readLine();
-                ProtocolMessage resp = ProtocolMessage.parse(respLine);
                 if (resp != null && ProtocolConstants.CMD_WORKERS_RESP.equals(resp.getAction())) {
-                    SwingUtilities.invokeLater(() -> updateWorkersTable(resp.getPayload()));
+                    final ProtocolMessage finalResp = resp;
+                    SwingUtilities.invokeLater(() -> updateWorkersTable(finalResp.getPayload()));
                 }
             } catch (Exception ignored) {}
         }, "WorkersPollThread").start();

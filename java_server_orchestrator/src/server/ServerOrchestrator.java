@@ -494,8 +494,9 @@ public class ServerOrchestrator {
     }
 
     private void handleWorkerRegistration(Socket socket) {
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-             BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8))) {
+        try {
+            BufferedReader reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
+            BufferedWriter writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
 
             String line = reader.readLine();
             if (line == null) {
@@ -505,12 +506,18 @@ public class ServerOrchestrator {
 
             ProtocolMessage msg = ProtocolMessage.parse(line);
             if (msg != null && ProtocolConstants.CMD_REGISTER.equals(msg.getAction())) {
-                String[] parts = msg.getPayload().split(",");
-                String lang = (parts.length > 0) ? parts[0] : "Generic";
-                int threads = (parts.length > 1) ? Integer.parseInt(parts[1]) : 1;
-                String caps = (parts.length > 2) ? parts[2] : "CONV,MLP";
+                String payload = msg.getPayload();
+                String[] parts = payload.contains("|") ? payload.split("\\|") : payload.split(",");
+                String lang = (parts.length > 0) ? parts[0].trim() : "Generic";
+                int threads = 1;
+                if (parts.length > 1) {
+                    try {
+                        threads = Integer.parseInt(parts[1].trim());
+                    } catch (NumberFormatException ignored) {}
+                }
+                String caps = (parts.length > 2) ? parts[2].trim() : "CONV,MLP";
 
-                WorkerNodeSession session = new WorkerNodeSession(msg.getId(), lang, threads, caps, socket);
+                WorkerNodeSession session = new WorkerNodeSession(msg.getId(), lang, threads, caps, socket, reader, writer);
                 registry.register(session);
 
                 recordEvent("WORKER", msg.getId(), "Worker registered: " + lang + " with " + threads + " threads (" + caps + ")");
@@ -1095,6 +1102,9 @@ public class ServerOrchestrator {
         int hPort = (args.length > 2) ? Integer.parseInt(args[2]) : (envPort != null ? Integer.parseInt(envPort) : 8080);
         int wPort = (args.length > 0) ? Integer.parseInt(args[0]) : (hPort == 9010 ? 9011 : ProtocolConstants.DEFAULT_WORKER_PORT);
         int cPort = (args.length > 1) ? Integer.parseInt(args[1]) : (hPort == 8080 ? 8085 : ProtocolConstants.DEFAULT_CLIENT_PORT);
+        if (cPort == hPort) {
+            cPort = hPort + 5;
+        }
 
         ServerOrchestrator server = new ServerOrchestrator(wPort, cPort, hPort);
         server.start();

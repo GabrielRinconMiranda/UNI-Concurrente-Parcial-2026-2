@@ -28,7 +28,7 @@ public class NodeRegistry {
                 }
             }
         }
-        System.out.println("[Registry] Configuración actualizada: maxCubos=" + maxActiveCubes + ", lenguajes=" + enabledLanguages);
+        System.out.println("[Registry] Configuration updated: maxCubes=" + maxActiveCubes + ", languages=" + enabledLanguages);
     }
 
     public int getMaxActiveCubes() {

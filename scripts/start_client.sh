@@ -10,3 +10,4 @@ PORT="${3:-8085}"
 echo "[Client] Starting Desktop Client Workspace connecting to $HOST:$PORT..."
 cd "$ROOT_DIR/java_server_orchestrator"
 java -cp bin client.DesktopChatGui "$CLIENT_ID" "$HOST" "$PORT"
+

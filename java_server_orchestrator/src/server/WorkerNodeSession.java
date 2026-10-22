@@ -29,13 +29,19 @@ public class WorkerNodeSession {
     private volatile long lastActiveTime = System.currentTimeMillis();
 
     public WorkerNodeSession(String workerId, String language, int maxThreads, String capabilities, Socket socket) throws IOException {
+        this(workerId, language, maxThreads, capabilities, socket,
+             new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8)),
+             new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8)));
+    }
+
+    public WorkerNodeSession(String workerId, String language, int maxThreads, String capabilities, Socket socket, BufferedReader reader, BufferedWriter writer) {
         this.workerId = workerId;
         this.language = language;
         this.maxThreads = Math.max(1, maxThreads);
         this.capabilities = capabilities;
         this.socket = socket;
-        this.reader = new BufferedReader(new InputStreamReader(socket.getInputStream(), StandardCharsets.UTF_8));
-        this.writer = new BufferedWriter(new OutputStreamWriter(socket.getOutputStream(), StandardCharsets.UTF_8));
+        this.reader = reader;
+        this.writer = writer;
         this.httpBaseUrl = null;
     }
 
@@ -144,6 +150,8 @@ public class WorkerNodeSession {
 
     public void close() {
         try {
+            if (reader != null) reader.close();
+            if (writer != null) writer.close();
             if (socket != null && !socket.isClosed()) {
                 socket.close();
             }

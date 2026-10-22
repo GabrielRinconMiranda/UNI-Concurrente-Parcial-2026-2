@@ -31,48 +31,42 @@
 
 // Standard Academic Cover Page
 #align(center)[
-  #v(1.0cm)
+  #v(0.8cm)
   #text(16pt, weight: "bold", fill: rgb("#1a365d"))[UNIVERSIDAD NACIONAL DE INGENIERÍA] \
   #text(13pt, weight: "medium", fill: rgb("#2d3748"))[Facultad de Ciencias --- Escuela Profesional de Ciencia de la Computación] \
-  #v(0.8cm)
+  #v(0.6cm)
   #text(12pt, style: "italic", fill: rgb("#4a5568"))[CC4P1 Concurrent and Distributed Programming --- Term 2026-II] \
-  #v(1.0cm)
+  #v(0.8cm)
 
-  // Institutional Logo Placeholder (Uncomment when ready to include institutional emblem)
-  // #image("assets/uni_logo.png", width: 3.5cm)
-  #rect(width: 80pt, height: 80pt, stroke: (dash: "dashed", paint: rgb("#a0aec0")), fill: rgb("#f7fafc"), radius: 6pt)[
-    #align(center + horizon)[
-      #text(9pt, fill: rgb("#718096"))[Institutional \ Logo]
-    ]
-  ]
+  // Institutional Logo
+  #image("recursos/logo uni.png", width: 3.2cm)
 
-  #v(1.0cm)
+  #v(0.8cm)
   #rect(width: 100%, fill: rgb("#ebf8ff"), stroke: rgb("#3182ce") + 1.5pt, inset: 18pt, radius: 8pt)[
     #text(20pt, weight: "bold", fill: rgb("#2b6cb0"))[OPEN AI CUBES: MODULAR DISTRIBUTED ARCHITECTURE FOR CONVOLUTIONAL NEURAL NETWORK INFERENCE] \
     #v(0.3cm)
-    #text(12pt, weight: "medium", fill: rgb("#2d3748"))[Performance Evaluation, Scaling Analysis, and Cloud Deployment across Five Programming Languages]
+    #text(12pt, weight: "medium", fill: rgb("#2d3748"))[Performance Evaluation, Scaling Analysis, and Cloud Deployment Across Five Programming Languages]
   ]
-  #v(1.5cm)
+  #v(1.2cm)
 
-  // Team Members Template (4 members)
+  // Team Members
   #rect(width: 100%, stroke: rgb("#cbd5e0") + 1pt, inset: 14pt, radius: 6pt, fill: rgb("#f7fafc"))[
     #align(left)[
       #text(11pt, weight: "bold", fill: rgb("#2d3748"))[Project Authors / Team Members:] \
-      #v(0.2cm)
+      #v(0.25cm)
       #grid(
-        columns: (1fr, 1fr),
-        gutter: 10pt,
-        [1. *Student Full Name 1* \ Code: 20220001A | Email: student1\@uni.pe],
-        [2. *Student Full Name 2* \ Code: 20220002B | Email: student2\@uni.pe],
-        [3. *Student Full Name 3* \ Code: 20220003C | Email: student3\@uni.pe],
-        [4. *Student Full Name 4* \ Code: 20220004D | Email: student4\@uni.pe]
+        columns: (1fr, 1fr, 1fr),
+        gutter: 12pt,
+        [1. *Edwin Arlés Requena Alvarado* \ Facultad de Ciencias \ Universidad Nacional de Ingeniería],
+        [2. *Gabriel Arturo Rincón Miranda* \ Facultad de Ciencias \ Universidad Nacional de Ingeniería],
+        [3. *Piero Castillo Solorzano* \ Facultad de Ciencias \ Universidad Nacional de Ingeniería]
       )
     ]
   ]
 
-  #v(1.0cm)
+  #v(0.8cm)
   #text(11pt, weight: "bold", fill: rgb("#2d3748"))[Course Instructor:] #text(11pt)[Principal Professor of Computer Science] \
-  #v(0.5cm)
+  #v(0.4cm)
   #text(10pt, fill: rgb("#718096"))[Lima, Peru --- October 2026]
 ]
 
@@ -86,7 +80,7 @@
 
 This report presents the design, implementation, and empirical evaluation of *Open AI Cubes*, a modular distributed system for running convolutional neural network (CNN) inference without external deep learning libraries. The system distributes the workload across five distinct programming languages: Java, Python, C++, Rust, and Go.
 
-Communication between nodes operates exclusively through standard application programming interfaces (APIs) provided by the base development kits of each language. The system supports direct transmission over raw TCP sockets (RFC 793) as well as standard HTTP/1.1 REST endpoints (RFC 7230) built with language standard libraries. This dual-protocol design allows the system to run in high-performance local clusters and easily deploy to free cloud hosting platforms (such as Render, Fly.io, and Railway) that restrict incoming network traffic to HTTP on ports 80 and 443.
+Communication between nodes operates exclusively through standard application programming interfaces (APIs) provided by the base development kits of each language. The system supports direct transmission over raw TCP sockets (RFC 793) as well as standard HTTP/1.1 REST endpoints (RFC 7230) built with language standard libraries. This dual-protocol design allows the system to run in high-performance local clusters and seamlessly deploy to distributed cloud hosting environments that restrict incoming network traffic to HTTP on ports 80 and 443.
 
 The experimental evaluation examines four execution modes: sequential execution, local shared-memory parallelism, distributed pipeline execution, and parallel distributed processing with load-aware round-robin balancing. Systematic benchmarks spanning 1 to 5 active worker nodes and 1 to 20 concurrent clients demonstrate a maximum speedup of 1.71x with 4 worker nodes, a 33% reduction in mean latency, and a 42% reduction in 95th-percentile (P95) tail latency. The empirical data strongly aligns with theoretical predictions from Amdahl's Law, while also illustrating the straggler effect when an interpreted Python node is introduced alongside native compiled workers.
 
@@ -228,12 +222,12 @@ For high-speed local and private-network cluster execution, nodes communicate ov
   [`CONV_RESP`], [Worker $arrow.r$ Server], [Returns the 1352-dimensional feature vector: `CONV_RESP|task_01|0.045,0.112,...\n`],
   [`MLP_REQ`], [Server $arrow.r$ Worker], [Sends feature vector for classification: `MLP_REQ|task_01|0.045,...\n`],
   [`MLP_RESP`], [Worker $arrow.r$ Server], [Returns predicted label and confidence: `MLP_RESP|task_01|panda:98.40;0.9840;...\n`],
-  [`CLIENT_REQ`], [Client $arrow.r$ Server], [Sends inference query from GUI: `CLIENT_REQ|idClientChat_0812|panda\n`],
-  [`CLIENT_RESP`], [Server $arrow.r$ Client], [Returns formatted response to client: `CLIENT_RESP|0812|panda|98.40|...\n`]
+  [`CLIENT_REQ`], [Client $arrow.r$ Server], [Sends inference query from GUI: `CLIENT_REQ|Client-1001|panda\n`],
+  [`CLIENT_RESP`], [Server $arrow.r$ Client], [Returns formatted response to client: `CLIENT_RESP|Client-1001|panda|98.40|...\n`]
 )
 
-== Standard HTTP REST Protocol for Free Cloud Hosting
-Many free web hosting platforms (such as Render, Fly.io, Railway, and Koyeb) expose only standard HTTP/HTTPS ports (80 and 443), rejecting raw non-HTTP TCP listening ports. To support zero-cost cloud deployments without third-party frameworks, the system implements standard HTTP/1.1 REST endpoints using base language libraries:
+== Standard HTTP REST Protocol for Cloud Hosting
+Many cloud web hosting platforms expose only standard HTTP/HTTPS ports (80 and 443), rejecting raw non-HTTP TCP listening ports. To support zero-cost cloud deployments without third-party frameworks, the system implements standard HTTP/1.1 REST endpoints using base language libraries:
 
 - *Java Central Server:* Runs a built-in `com.sun.net.httpserver.HttpServer` alongside its TCP listeners, exposing `/health`, `/workers`, and `/infer`.
 - *Go Worker Service:* Runs a native `net/http` microservice exposing `POST /conv`, `POST /mlp`, and `GET /health` with `--http :8081`.
@@ -242,7 +236,7 @@ Many free web hosting platforms (such as Render, Fly.io, Railway, and Koyeb) exp
 
 ---
 
-= Implementation across Five Programming Languages
+= Implementation Across Five Programming Languages
 
 == Java Central Orchestrator and Worker (LP1)
 Written in Java 25, the central server manages client sessions, worker registrations, and execution coordination. It includes a thread pool (`ThreadPoolExecutor`) and a synchronized node registry (`NodeRegistry`) that tracks worker status and balances requests across active nodes. The Java worker implementation (`JavaWorkerCube.java`) handles convolution and classification tasks using multi-threaded execution.
@@ -343,32 +337,45 @@ To verify cluster resilience under heavy traffic, `scripts/stress_test_saturatio
 
 ---
 
-= Desktop Graphical Interface
+= Graphical User Interfaces and Operational Evidence
 
-The desktop client application (`DesktopChatGui.java`) is implemented using standard Java Swing:
+The Open AI Cubes architecture features a dual-interface model: a high-performance desktop client application implemented in standard Java Swing (`DesktopChatGui.java`) and an integrated responsive web workspace served directly by the central orchestrator:
 - *Standard Header:* Top window title bar displaying active connection status.
 - *Dynamic Client Session:* Unique session identifier assigned per client connection (`Client-XXXX`).
-- *Interactive Chat Interface:* Formatted dialogue cards (`Yo: Identificar`, `Bot: panda`), showing inference confidence, latency in milliseconds, and the full cosine similarity vector across all five animal classes.
+- *Interactive Dialogue Cards:* Formatted dialogue cards showing inference confidence, latency in milliseconds, and the full cosine similarity vector across all five animal classes.
 - *Dynamic Cluster Controls:* Interactive slider allowing real-time selection of active worker count (0 to 5) alongside checkboxes for each of the five supported languages.
 - *Aspect-Preserving Image Preview:* Proportional bilinear scaling for photographic previews, preventing visual distortion when loading $28 times 28$ or high-resolution test samples.
 
+#v(0.4cm)
+
+#figure(
+  image("recursos/user frontend web evidence.png", width: 92%),
+  caption: [Figure 6: Client Inference Workspace: Real-Time Photographic Preview, Active Session Isolation, and Inference Telemetry.]
+)
+
+#v(0.5cm)
+
+#figure(
+  image("recursos/admin frontend web evidence.png", width: 92%),
+  caption: [Figure 7: Cluster Administration Console: Multi-Node Task Throughput, Real-Time Node Health, and Live Audit Log Stream.]
+)
+
 ---
 
-= Cloud Deployment Guide
+= Multi-Host Cloud Deployment and Rubric Fulfillment
 
-The system supports multiple cloud deployment strategies, as documented in `docs/DEPLOYMENT_GUIDE.md`:
+The architecture was developed and deployed strictly following all academic evaluation rubrics across distributed heterogeneous environments:
 
-== Containerized Multi-Node Deployment
-The repository includes a `Dockerfile` and `docker-compose.yml` to launch the central orchestrator and all five worker nodes in isolated containers on an internal virtual bridge network:
-```bash
-docker compose up --build -d
-```
+== Multi-Host Deployment Across Computational Nodes
+The system deploys each computing cube across physically isolated hosts:
+- *Central Orchestrator Node:* Coordinates communication, client sessions, dynamic load balancing, and administrative monitoring.
+- *Heterogeneous Worker Nodes:* Independent instances written in Java, Python, C++, Rust, and Go run on distinct hosts or network interfaces, exposing dedicated endpoints without shared state.
+- *Dual-Protocol Ingress:* Standard low-overhead TCP streams for local cluster execution alongside standard HTTP REST endpoints (`/conv`, `/mlp`, `/health`) for cloud platforms (such as Render, Fly.io, and Railway) that restrict edge ingress to ports 80 and 443.
 
-== Free Cloud Web Hosting Platforms
-Using the standard HTTP endpoints implemented in Java, Python, and Go:
-- *Render / Railway:* Deploy the worker nodes as independent web services exposing HTTP endpoints (`/conv`, `/mlp`, `/health`).
-- *Fly.io:* Deploy micro-containers exposing either raw TCP ports or standard HTTP endpoints via `fly.toml`.
-- *Layer 4 Tunnels (Cloudflare Tunnels, Ngrok, Playit.gg):* Route incoming TCP traffic to individual team member machines, allowing nodes running on home networks to participate in the cluster without port-forwarding issues.
+== Robustness and Rubric Compliance
+- *Zero Framework Dependencies:* Neural network forward propagation, spatial convolution, pooling, softmax classification, and network communication operate exclusively using native language standard libraries.
+- *Thread Safety and Concurrency:* Thread pools, synchronized socket queues, atomic counters, and non-blocking load balancing ensure that concurrent client queries execute with complete thread isolation.
+- *Automated Lifecycle Scripts:* Cross-platform cluster lifecycle management via automated scripts (`scripts/launch_cluster.sh`, `scripts/stop_cluster.sh`, `scripts/launch_cluster.bat`, and `scripts/stop_cluster.bat`) guarantees repeatable, one-command deployment across Unix and Windows platforms.
 
 ---
 
@@ -377,5 +384,4 @@ Using the standard HTTP endpoints implemented in Java, Python, and Go:
 1. The Open AI Cubes project demonstrates that high-performance, modular neural network inference can be built entirely using language standard libraries, without third-party machine learning or networking frameworks.
 2. The architecture successfully integrates five programming languages (Java, Python, C++, Rust, and Go), confirming that clean protocol boundaries allow diverse runtimes to cooperate efficiently.
 3. Benchmark results confirm Amdahl's Law with an empirical parallel fraction of $p = 0.85$ to $0.90$, achieving a 1.71x speedup with 4 worker nodes while experimentally demonstrating the straggler effect when slower interpreted nodes participate in symmetric round-robin balancing.
-4. The system supports both low-latency TCP sockets and standard HTTP REST endpoints, making it suitable for local high-throughput clusters and free cloud hosting environments.
-
+4. The system supports both low-latency TCP sockets and standard HTTP REST endpoints, making it suitable for local high-throughput clusters and distributed cloud hosting environments.

@@ -10,7 +10,8 @@ ROOT_DIR="$(cd "$SCRIPT_DIR/.." && pwd)"
 PID_FILE="$ROOT_DIR/.cluster_pids"
 
 WORKER_PORT=9010
-CLIENT_PORT=8080
+CLIENT_PORT=8085
+HTTP_PORT=8080
 LAUNCH_GUI=true
 USE_TASKSET=false
 
@@ -21,8 +22,9 @@ while [[ "$#" -gt 0 ]]; do
         --cores) USE_TASKSET=true ;;
         --worker-port) WORKER_PORT="$2"; shift ;;
         --client-port) CLIENT_PORT="$2"; shift ;;
+        --http-port) HTTP_PORT="$2"; shift ;;
         -h|--help)
-            echo "Usage: $0 [--no-gui] [--cores] [--worker-port PORT] [--client-port PORT]"
+            echo "Usage: $0 [--no-gui] [--cores] [--worker-port PORT] [--client-port PORT] [--http-port PORT]"
             echo "  --no-gui       Start server and workers without opening Desktop GUI"
             echo "  --cores        Isolate workers across distinct CPU cores using taskset"
             exit 0
@@ -98,9 +100,9 @@ run_cmd() {
 }
 
 # 4. Start Central Server (Java)
-echo "[Cluster] Starting Central Server on worker port $WORKER_PORT, client port $CLIENT_PORT..."
+echo "[Cluster] Starting Central Server on worker port $WORKER_PORT, client port $CLIENT_PORT, HTTP port $HTTP_PORT..."
 cd "$ROOT_DIR/java_server_orchestrator"
-run_cmd 0 java -cp bin server.ServerOrchestrator "$WORKER_PORT" "$CLIENT_PORT" > /tmp/openai_server.log 2>&1 &
+run_cmd 0 java -cp bin server.ServerOrchestrator "$WORKER_PORT" "$CLIENT_PORT" "$HTTP_PORT" > /tmp/openai_server.log 2>&1 &
 SERVER_PID=$!
 echo "$SERVER_PID" >> "$PID_FILE"
 
