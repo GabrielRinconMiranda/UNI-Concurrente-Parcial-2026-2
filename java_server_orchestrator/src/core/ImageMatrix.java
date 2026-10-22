@@ -168,10 +168,11 @@ public class ImageMatrix {
     }
 
     /**
-     * Ingests a real photograph file with default high-resolution (720x720).
+     * Ingests a real photograph file with standard 28x28 CNN dimension for fast neural processing,
+     * while preserving the original high-resolution photography in sourceImage for the visualizer.
      */
     public static ImageMatrix fromFile(File file, String label) throws IOException {
-        return fromFile(file, label, HIGH_RES_WIDTH, HIGH_RES_HEIGHT);
+        return fromFile(file, label, DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
 
     /**
