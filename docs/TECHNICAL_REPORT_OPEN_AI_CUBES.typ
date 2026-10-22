@@ -106,7 +106,7 @@ This project addresses those challenges by implementing a modular inference engi
   - *Parallel:* Single machine utilizing multiple physical CPU cores and logical threads.
   - *Distributed:* Multiple machines running one worker task at a time in sequence.
   - *Parallel Distributed:* Multiple machines concurrently processing client requests across all available workers.
-5. *Interactive Client Chat Interface:* A desktop graphical interface providing validated user authentication (`idClientChat 0812`), interactive query bubbles (`Yo: Identificar`, `Bot: panda`), live latency indicators, and dynamic worker controls.
+5. *Interactive Client Interface:* A desktop and web interface providing dynamic client session allocation (`Client-XXXX`), real-time query dialogue, latency telemetry, and cluster controls.
 6. *Stochastic Stress Testing:* Saturation testing with hundreds of transactions and randomized delays to evaluate system stability and throughput limits under contention.
 
 ---
@@ -347,7 +347,7 @@ To verify cluster resilience under heavy traffic, `scripts/stress_test_saturatio
 
 The desktop client application (`DesktopChatGui.java`) is implemented using standard Java Swing:
 - *Standard Header:* Top window title bar displaying active connection status.
-- *Validated User Identity:* Authenticated user header showing `idClientChat 0812`.
+- *Dynamic Client Session:* Unique session identifier assigned per client connection (`Client-XXXX`).
 - *Interactive Chat Interface:* Formatted dialogue cards (`Yo: Identificar`, `Bot: panda`), showing inference confidence, latency in milliseconds, and the full cosine similarity vector across all five animal classes.
 - *Dynamic Cluster Controls:* Interactive slider allowing real-time selection of active worker count (0 to 5) alongside checkboxes for each of the five supported languages.
 - *Aspect-Preserving Image Preview:* Proportional bilinear scaling for photographic previews, preventing visual distortion when loading $28 times 28$ or high-resolution test samples.

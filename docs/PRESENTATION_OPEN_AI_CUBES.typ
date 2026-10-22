@@ -309,8 +309,8 @@
   rect(fill: rgb("#1a202c"), stroke: rgb("#4a5568") + 1pt, inset: 13pt, radius: 8pt)[
     #text(15pt, weight: "bold", fill: rgb("#63b3ed"))[Client User Experience] \
     #v(0.2cm)
-    - *Authentication:* Verified user session (`idClientChat 0812`).
-    - *Interactive Dialogue:* Chat cards (`Yo: Identificar` $arrow.r$ `Bot: panda (98.4%)`).
+    - *Session Concurrency:* Dynamic client session identifier (`Client-XXXX`).
+    - *Interactive Dialogue:* Real-time response cards (`Query` $arrow.r$ `Class: panda (98.4%)`).
     - *Aspect-Preserving Preview:* Proportional bilinear scaling prevents image distortion.
     - *Real-Time Cluster Controls:* Slider to adjust worker count (0 to 5) and checkboxes to enable/disable languages on the fly.
   ],
