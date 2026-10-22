@@ -1,0 +1,11 @@
+# Dockerfile para Cubo de Cómputo C++ (OpenMP) en Render
+FROM debian:bookworm-slim
+RUN apt-get update && apt-get install -y --no-install-recommends g++ libgomp1 make && rm -rf /var/lib/apt/lists/*
+WORKDIR /app
+COPY cpp_worker_cube /app/cpp_worker_cube
+RUN cd /app/cpp_worker_cube && g++ -std=c++17 -O2 -fopenmp worker_cube.cpp -o worker_cube
+
+ENV PORT=8080
+EXPOSE 8080
+CMD ["sh", "-c", "/app/cpp_worker_cube/worker_cube --http ${PORT:-8080} 4"]
+

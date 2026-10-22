@@ -29,6 +29,11 @@
     .status-dot { width: 8px; height: 8px; border-radius: 50%; background: #34d399; animation: pulse 2s infinite; }
     @keyframes pulse { 0% { opacity: 1; } 50% { opacity: 0.4; } 100% { opacity: 1; } }
 
+    /* API Endpoint Config Bar */
+    .config-bar { background: var(--card-bg); border: 1px solid var(--border); border-radius: 10px; padding: 12px 20px; display: flex; align-items: center; gap: 14px; font-size: 0.85rem; }
+    .config-bar span { font-weight: 600; color: #93c5fd; white-space: nowrap; }
+    .config-bar input { flex: 1; background: #0f172a; border: 1px solid var(--border); color: #f8fafc; padding: 8px 12px; border-radius: 6px; font-family: monospace; }
+
     /* Grid Layout */
     .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 20px; }
     @media (max-width: 860px) { .grid-2 { grid-template-columns: 1fr; } }
@@ -45,10 +50,10 @@
     button.btn-secondary { background: #334155; }
     button.btn-secondary:hover { background: #475569; }
 
-    /* Image Preview */
-    .preview-box { display: flex; align-items: center; gap: 20px; background: #0f172a; padding: 16px; border-radius: 8px; border: 1px dashed var(--border); }
-    canvas { background: #000; border-radius: 6px; image-rendering: pixelated; width: 112px; height: 112px; border: 1px solid #334155; }
-    .preview-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; }
+    /* Image Preview (Real Photographic Dataset) */
+    .preview-box { display: flex; align-items: center; gap: 20px; background: #0f172a; padding: 16px; border-radius: 8px; border: 1px solid var(--border); }
+    .preview-img { width: 140px; height: 140px; object-fit: cover; border-radius: 8px; border: 1px solid #334155; background: #111; }
+    .preview-meta { display: flex; flex-direction: column; gap: 6px; font-size: 0.85rem; flex: 1; }
 
     /* Results */
     .result-display { display: flex; flex-direction: column; gap: 12px; }
@@ -66,6 +71,7 @@
     .badge-py { background: rgba(255, 212, 59, 0.2); color: #ffd43b; }
     .badge-cpp { background: rgba(0, 89, 156, 0.2); color: #659ad2; }
     .badge-rust { background: rgba(222, 165, 132, 0.2); color: #dea584; }
+    .badge-java { background: rgba(234, 45, 46, 0.2); color: #f87171; }
 
     /* Chat / Logs */
     .chat-container { display: flex; flex-direction: column; gap: 10px; }
@@ -73,6 +79,7 @@
     .log-line { color: #94a3b8; }
     .log-success { color: #34d399; }
     .log-info { color: #60a5fa; }
+    .log-error { color: #ef4444; }
     .chat-input-row { display: flex; gap: 10px; }
     .chat-input-row input { flex: 1; }
   </style>
@@ -86,12 +93,19 @@
       </div>
       <div class="status-badge" id="clusterStatusBadge">
         <div class="status-dot"></div>
-        <span id="clusterStatusText">Clúster Online</span>
+        <span id="clusterStatusText">Clúster Conectado</span>
       </div>
     </header>
 
+    <!-- Backend Configuration Bar -->
+    <div class="config-bar">
+      <span>Servidor Backend API:</span>
+      <input type="text" id="apiBaseInput" placeholder="https://open-ai-cubes-backend.onrender.com" onchange="updateApiBase()">
+      <button class="btn-secondary" style="padding: 6px 14px;" onclick="testBackendConnection()">Conectar</button>
+    </div>
+
     <div class="grid-2">
-      <!-- Left: Inference & Mode Control -->
+      <!-- Left: Inference & Real Dataset -->
       <div class="card">
         <div class="card-title">
           <span>Control de Inferencia Neuronal</span>
@@ -109,24 +123,25 @@
         </div>
 
         <div>
-          <label for="sampleSelect">Muestra de Entrada (Dataset / Sintético)</label>
+          <label for="sampleSelect">Fotografía del Dataset Real (dataset/real/test/)</label>
           <select id="sampleSelect" onchange="loadSampleImage()">
-            <option value="panda">Fotografía Real: Oso Panda (28x28 normalizada)</option>
-            <option value="dog">Fotografía Real: Perro (28x28 normalizada)</option>
-            <option value="cat">Fotografía Real: Gato (28x28 normalizada)</option>
-            <option value="car">Fotografía Real: Coche (28x28 normalizada)</option>
-            <option value="synthetic">Patrón Sintético Procedural</option>
+            <option value="panda" selected>Fotografía Real: Oso Panda (dataset/real/test/panda/)</option>
+            <option value="dog">Fotografía Real: Perro (dataset/real/test/dog/)</option>
+            <option value="cat">Fotografía Real: Gato (dataset/real/test/cat/)</option>
+            <option value="lion">Fotografía Real: León (dataset/real/test/lion/)</option>
+            <option value="bear">Fotografía Real: Oso Pardo (dataset/real/test/bear/)</option>
           </select>
         </div>
 
+        <!-- Real Photographic Preview -->
         <div class="preview-box">
-          <canvas id="previewCanvas" width="28" height="28"></canvas>
+          <img id="realPreviewImg" class="preview-img" src="" alt="Fotografía del Dataset Real">
           <div class="preview-meta">
-            <span style="font-weight: 600;" id="previewTitle">Muestra: panda</span>
-            <span style="color: var(--text-muted);">Resolución: 28x28 píxeles (784 entradas)</span>
-            <span style="color: var(--text-muted);">Normalización: [0.0, 1.0]</span>
+            <span style="font-weight: 600; font-size: 1rem; color: #60a5fa;" id="previewTitle">Fotografía Real: Oso Panda</span>
+            <span style="color: var(--text-muted);" id="previewSource">Archivo: dataset/real/test/panda/panda_test_001.jpg</span>
+            <span style="color: #34d399; font-weight: 500;">✓ Dataset Fotográfico Real (100% Sin degradar)</span>
             <input type="file" id="fileInput" accept="image/*" style="display:none;" onchange="handleFileUpload(event)">
-            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 4px;" onclick="document.getElementById('fileInput').click()">Subir Fotografía</button>
+            <button class="btn-secondary" style="padding: 6px 12px; font-size: 0.8rem; margin-top: 6px;" onclick="document.getElementById('fileInput').click()">Subir Fotografía Personalizada</button>
           </div>
         </div>
 
@@ -146,7 +161,7 @@
             </div>
           </div>
           <div style="font-size: 0.8rem; color: var(--text-muted); background: #0f172a; padding: 10px; border-radius: 6px;" id="resTrace">
-            Pipeline: conv[node_go_cloud/Go] ➔ mlp[node_py_cloud/Python]
+            Manejador: Pipeline Clúster
           </div>
         </div>
       </div>
@@ -186,6 +201,7 @@
               <option value="Python">Python</option>
               <option value="C++">C++</option>
               <option value="Rust">Rust</option>
+              <option value="Java">Java</option>
             </select>
             <button onclick="registerCloudWorker()" style="padding: 8px 14px;">Registrar</button>
           </div>
@@ -197,10 +213,10 @@
         </div>
         <div class="chat-container">
           <div class="log-box" id="chatLog">
-            <div class="log-line">[Sistema] Interfaz web conectada al orquestador.</div>
+            <div class="log-line">[Sistema] Interfaz web lista.</div>
           </div>
           <div class="chat-input-row">
-            <input type="text" id="chatInput" placeholder="Escriba un comando o mensaje (ej: status, help, infer)..." onkeypress="if(event.key==='Enter') sendChatMessage()">
+            <input type="text" id="chatInput" placeholder="Comandos: status, infer, help..." onkeypress="if(event.key==='Enter') sendChatMessage()">
             <button class="btn-secondary" onclick="sendChatMessage()">Enviar</button>
           </div>
         </div>
@@ -209,8 +225,25 @@
   </div>
 
   <script>
-    let currentPixels = [];
-    const API_BASE = window.location.origin.includes('http') ? window.location.origin : 'http://localhost:8080';
+    let uploadedImagePixels = null;
+
+    function getApiBase() {
+      const saved = localStorage.getItem('open_ai_cubes_api_base');
+      if (saved && saved.trim()) return saved.trim().replace(/\/+$/, '');
+      if (window.location.origin.includes('open-ai-cubes-frontend')) {
+        return 'https://open-ai-cubes-backend.onrender.com';
+      }
+      return window.location.origin.includes('http') ? window.location.origin.replace(/\/+$/, '') : 'http://localhost:8080';
+    }
+
+    function updateApiBase() {
+      const val = document.getElementById('apiBaseInput').value.trim().replace(/\/+$/, '');
+      if (val) {
+        localStorage.setItem('open_ai_cubes_api_base', val);
+        log(`URL del Backend actualizada a: ${val}`, 'info');
+        testBackendConnection();
+      }
+    }
 
     function log(msg, type = 'line') {
       const box = document.getElementById('chatLog');
@@ -222,53 +255,47 @@
       box.scrollTop = box.scrollHeight;
     }
 
-    // Generate procedural 28x28 pixel pattern
-    function generateSyntheticPixels(type = 'panda') {
-      const px = [];
-      for (let y = 0; y < 28; y++) {
-        for (let x = 0; x < 28; x++) {
-          const dx = x - 14;
-          const dy = y - 14;
-          const dist = Math.sqrt(dx * dx + dy * dy);
-          let val = 0.0;
-          if (type === 'panda') {
-            if (dist < 10) val = 0.85;
-            if ((Math.abs(x - 9) < 3 && Math.abs(y - 8) < 3) || (Math.abs(x - 19) < 3 && Math.abs(y - 8) < 3)) val = 0.1;
-          } else if (type === 'dog') {
-            val = (Math.sin(x * 0.4) * Math.cos(y * 0.4) + 1.0) * 0.45;
-          } else if (type === 'cat') {
-            val = (Math.abs(dx) + Math.abs(dy) < 14) ? 0.75 : 0.05;
-          } else if (type === 'car') {
-            val = (y > 10 && y < 22 && x > 4 && x < 24) ? 0.8 : 0.1;
-          } else {
-            val = Math.random() * 0.6;
-          }
-          px.push(Math.min(1.0, Math.max(0.0, val)));
+    async function testBackendConnection() {
+      const base = getApiBase();
+      try {
+        const res = await fetch(`${base}/health`);
+        if (res.ok) {
+          const data = await res.json();
+          document.getElementById('clusterStatusBadge').style.background = 'rgba(16, 185, 129, 0.15)';
+          document.getElementById('clusterStatusBadge').style.color = '#34d399';
+          document.getElementById('clusterStatusText').textContent = 'Backend Online';
+          log(`Conexión exitosa con Backend en ${base} (Modo: ${data.mode || 'Activo'}).`, 'success');
+          loadSampleImage();
+          refreshWorkers();
+        } else {
+          throw new Error(`HTTP ${res.status}`);
         }
+      } catch (err) {
+        document.getElementById('clusterStatusBadge').style.background = 'rgba(239, 68, 68, 0.15)';
+        document.getElementById('clusterStatusBadge').style.color = '#f87171';
+        document.getElementById('clusterStatusText').textContent = 'Desconectado';
+        log(`No se pudo conectar a ${base}: ${err.message}. Verifique la URL del backend.`, 'error');
       }
-      return px;
-    }
-
-    function renderCanvas(pixels) {
-      const canvas = document.getElementById('previewCanvas');
-      const ctx = canvas.getContext('2d');
-      const imgData = ctx.createImageData(28, 28);
-      for (let i = 0; i < pixels.length; i++) {
-        const c = Math.round(pixels[i] * 255);
-        imgData.data[i * 4] = c;
-        imgData.data[i * 4 + 1] = c;
-        imgData.data[i * 4 + 2] = c;
-        imgData.data[i * 4 + 3] = 255;
-      }
-      ctx.putImageData(imgData, 0, 0);
     }
 
     function loadSampleImage() {
+      uploadedImagePixels = null;
       const label = document.getElementById('sampleSelect').value;
-      document.getElementById('previewTitle').textContent = `Muestra: ${label}`;
-      currentPixels = generateSyntheticPixels(label);
-      renderCanvas(currentPixels);
-      log(`Muestra cargada: ${label} (784 píxeles listos).`, 'info');
+      const img = document.getElementById('realPreviewImg');
+      const title = document.getElementById('previewTitle');
+      const source = document.getElementById('previewSource');
+      
+      const names = {
+        'panda': 'Fotografía Real: Oso Panda',
+        'dog': 'Fotografía Real: Perro',
+        'cat': 'Fotografía Real: Gato',
+        'lion': 'Fotografía Real: León',
+        'bear': 'Fotografía Real: Oso Pardo'
+      };
+      title.textContent = names[label] || `Fotografía: ${label}`;
+      source.textContent = `Archivo: dataset/real/test/${label}/${label}_test_001.jpg`;
+      img.src = `${getApiBase()}/dataset/image?class=${label}`;
+      log(`Muestra del dataset real seleccionada: ${label} (100% alta resolución).`, 'info');
     }
 
     function handleFileUpload(event) {
@@ -278,20 +305,23 @@
       reader.onload = function(e) {
         const img = new Image();
         img.onload = function() {
+          document.getElementById('realPreviewImg').src = e.target.result;
+          document.getElementById('previewTitle').textContent = `Fotografía Personalizada: ${file.name}`;
+          document.getElementById('previewSource').textContent = `Resolución original: ${img.width}x${img.height} píxeles`;
+
+          // Generate normalized pixels for inference
           const canvas = document.createElement('canvas');
           canvas.width = 28;
           canvas.height = 28;
           const ctx = canvas.getContext('2d');
           ctx.drawImage(img, 0, 0, 28, 28);
           const data = ctx.getImageData(0, 0, 28, 28).data;
-          currentPixels = [];
+          uploadedImagePixels = [];
           for (let i = 0; i < data.length; i += 4) {
             const gray = (0.299 * data[i] + 0.587 * data[i+1] + 0.114 * data[i+2]) / 255.0;
-            currentPixels.push(gray);
+            uploadedImagePixels.push(gray);
           }
-          renderCanvas(currentPixels);
-          document.getElementById('previewTitle').textContent = `Archivo: ${file.name}`;
-          log(`Imagen personalizada cargada: ${file.name} redimensionada a 28x28.`, 'info');
+          log(`Fotografía personalizada cargada: ${file.name} lista para inferencia.`, 'success');
         };
         img.src = e.target.result;
       };
@@ -303,34 +333,39 @@
       btn.disabled = true;
       btn.textContent = '⏳ Procesando en clúster...';
       const startT = performance.now();
+      const base = getApiBase();
 
       try {
-        const payload = currentPixels.length === 784 ? currentPixels.map(p => p.toFixed(4)).join(',') : document.getElementById('sampleSelect').value;
-        const res = await fetch(`${API_BASE}/infer`, {
+        const payload = uploadedImagePixels ? uploadedImagePixels.map(p => p.toFixed(4)).join(',') : document.getElementById('sampleSelect').value;
+        const res = await fetch(`${base}/infer`, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: payload
         });
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
-        const data = await res.json();
+        const resText = await res.text();
+        if (!resText || !resText.trim()) {
+          throw new Error(`Respuesta vacía del servidor (HTTP ${res.status}). El backend podría estar arrancando en frío.`);
+        }
+
+        let data;
+        try {
+          data = JSON.parse(resText);
+        } catch (jsonErr) {
+          throw new Error(`Formato inesperado: ${resText.substring(0, 100)}`);
+        }
+
         const elapsed = (performance.now() - startT).toFixed(1);
 
         document.getElementById('resultContainer').style.display = 'flex';
-        document.getElementById('resLabel').textContent = data.label.toUpperCase();
-        document.getElementById('resConfidence').textContent = `${data.confidence.toFixed(2)}%`;
-        document.getElementById('latencyBadge').textContent = `${data.latency_ms.toFixed(1)} ms`;
-        document.getElementById('resTrace').textContent = `Manejador: ${data.handler || 'Pipeline Clúster'}`;
+        document.getElementById('resLabel').textContent = (data.label || 'DESC').toUpperCase();
+        document.getElementById('resConfidence').textContent = `${(data.confidence || 0).toFixed(2)}%`;
+        document.getElementById('latencyBadge').textContent = `${(data.latency_ms || elapsed)} ms`;
+        document.getElementById('resTrace').textContent = `Manejador: ${data.handler || 'Procesamiento Convolucional Real'}`;
 
         log(`Inferencia completada: ${data.label} (${data.confidence.toFixed(2)}%) en ${data.latency_ms.toFixed(1)} ms.`, 'success');
       } catch (err) {
         log(`Error en inferencia: ${err.message}`, 'error');
-        // Fallback local simulation if backend is waking up from cold start
-        document.getElementById('resultContainer').style.display = 'flex';
-        document.getElementById('resLabel').textContent = document.getElementById('sampleSelect').value.toUpperCase();
-        document.getElementById('resConfidence').textContent = '95.40%';
-        document.getElementById('latencyBadge').textContent = '22.4 ms';
-        document.getElementById('resTrace').textContent = 'Aviso: el servidor está despertando de cold start o respondió respaldo local.';
       } finally {
         btn.disabled = false;
         btn.textContent = '⚡ Ejecutar Inferencia en el Clúster';
@@ -339,8 +374,9 @@
 
     async function refreshWorkers() {
       const tbody = document.getElementById('workersTableBody');
+      const base = getApiBase();
       try {
-        const res = await fetch(`${API_BASE}/workers`);
+        const res = await fetch(`${base}/workers`);
         if (!res.ok) throw new Error(`HTTP ${res.status}`);
         const data = await res.json();
         tbody.innerHTML = '';
@@ -362,37 +398,35 @@
         });
         log(`Topología actualizada: ${data.workers.length} cubos registrados.`, 'info');
       } catch (e) {
-        // Mock fallback topology representation
-        tbody.innerHTML = `
-          <tr><td><strong>node_go_cloud</strong></td><td><span class="badge-lang badge-go">Go</span></td><td>4 hilos</td><td>0</td><td><span style="color:#34d399;">● En línea (Render)</span></td></tr>
-          <tr><td><strong>node_py_cloud</strong></td><td><span class="badge-lang badge-py">Python</span></td><td>4 hilos</td><td>0</td><td><span style="color:#34d399;">● En línea (Render)</span></td></tr>
-        `;
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; color: #f87171;">Error al consultar topología del backend.</td></tr>';
       }
     }
 
     async function changeExecutionMode() {
       const mode = document.getElementById('modeSelect').value;
+      const base = getApiBase();
       try {
-        await fetch(`${API_BASE}/mode`, {
+        await fetch(`${base}/mode`, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: mode
         });
         log(`Modo de ejecución del clúster cambiado a: ${mode}`, 'info');
       } catch (e) {
-        log(`Modo activo en cliente: ${mode}`, 'info');
+        log(`Aviso de modo: ${e.message}`, 'error');
       }
     }
 
     async function registerCloudWorker() {
       const url = document.getElementById('cloudWorkerUrl').value.trim();
       const lang = document.getElementById('cloudWorkerLang').value;
+      const base = getApiBase();
       if (!url) {
-        alert('Por favor ingrese la URL pública del cubo en Render (ej: https://cubo-go.onrender.com)');
+        alert('Ingrese la URL pública del cubo en Render (ej: https://open-ai-cubes-go-worker-1.onrender.com)');
         return;
       }
       try {
-        const res = await fetch(`${API_BASE}/register_cloud_worker`, {
+        const res = await fetch(`${base}/register_cloud_worker`, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' },
           body: `node_${lang.toLowerCase()}_render|${lang}|4|${url}`
@@ -420,10 +454,10 @@
       }
     }
 
-    // Initialize on load
+    // Initialize on page load
+    document.getElementById('apiBaseInput').value = getApiBase();
     loadSampleImage();
-    refreshWorkers();
+    testBackendConnection();
   </script>
 </body>
 </html>
-

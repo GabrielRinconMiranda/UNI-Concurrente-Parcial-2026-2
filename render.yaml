@@ -1,5 +1,5 @@
 services:
-  # 1. Servidor Backend Central (Java Orchestrator + Dashboard Web Integrado)
+  # 1. Servidor Backend Central (Java Orchestrator + API REST + Web Dashboard)
   - type: web
     name: open-ai-cubes-backend
     runtime: docker
@@ -10,43 +10,60 @@ services:
       - key: PORT
         value: 8080
 
-  # 2. Cubo de Cómputo Go (Host Nube 1)
+  # 2. Cubo de Cómputo Go (Microcubo Convolucional / MLP)
   - type: web
-    name: open-ai-cubes-go-worker-1
+    name: open-ai-cubes-go-worker
     runtime: go
     plan: free
     rootDir: go_worker_cube
     buildCommand: go build -o worker_cube worker_cube.go micro_chunks.go
     startCommand: ./worker_cube --http
 
-  # 3. Cubo de Cómputo Python (Host Nube 2)
+  # 3. Cubo de Cómputo Python (Microcubo Convolucional / MLP)
   - type: web
-    name: open-ai-cubes-python-worker-1
+    name: open-ai-cubes-python-worker
     runtime: python
     plan: free
     rootDir: python_worker_cube
     buildCommand: echo "Python worker ready"
     startCommand: python worker_cube.py --http
 
-  # 4. Cubo de Cómputo Go Adicional (Host Nube 3)
+  # 4. Cubo de Cómputo C++ con OpenMP (Microcubo Convolucional / MLP)
   - type: web
-    name: open-ai-cubes-go-worker-2
-    runtime: go
+    name: open-ai-cubes-cpp-worker
+    runtime: docker
     plan: free
-    rootDir: go_worker_cube
-    buildCommand: go build -o worker_cube worker_cube.go micro_chunks.go
-    startCommand: ./worker_cube --http
+    dockerfilePath: Dockerfile.cpp_worker
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: 8080
 
-  # 5. Cubo de Cómputo Python Adicional (Host Nube 4)
+  # 5. Cubo de Cómputo Rust (Microcubo Convolucional / MLP)
   - type: web
-    name: open-ai-cubes-python-worker-2
-    runtime: python
+    name: open-ai-cubes-rust-worker
+    runtime: rust
     plan: free
-    rootDir: python_worker_cube
-    buildCommand: echo "Python worker ready"
-    startCommand: python worker_cube.py --http
+    rootDir: rust_worker_cube
+    buildCommand: cargo build --release
+    startCommand: ./target/release/rust_worker_cube --http
 
+<<<<<<< HEAD
   # 6. Frontend Web Estático (Host Nube 5 - CDN Global, nunca duerme)
+=======
+  # 6. Cubo de Cómputo Java Independiente (Microcubo Convolucional / MLP)
+  - type: web
+    name: open-ai-cubes-java-worker
+    runtime: docker
+    plan: free
+    dockerfilePath: Dockerfile.java_worker
+    dockerContext: .
+    envVars:
+      - key: PORT
+        value: 8080
+
+  # 7. Frontend Web Estático (CDN Global de Alta Velocidad)
+>>>>>>> 3651a48 (feat: dataset real, correccion CORS y soporte de cubos en C++, Rust y Java)
   - type: web
     name: open-ai-cubes-frontend
     runtime: static

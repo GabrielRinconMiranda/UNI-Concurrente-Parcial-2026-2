@@ -118,7 +118,62 @@ public class JavaWorkerCube {
         }
     }
 
-    public static void main(String[] args) {
+    public static void runHttpWorker(int port, int threads) throws IOException {
+        com.sun.net.httpserver.HttpServer server = com.sun.net.httpserver.HttpServer.create(new java.net.InetSocketAddress(port), 0);
+        server.createContext("/health", exchange -> {
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            byte[] b = String.format("{\"status\":\"ok\",\"worker\":\"node_java_cloud\",\"language\":\"Java\",\"threads\":%d}\n", threads)
+                    .getBytes(StandardCharsets.UTF_8);
+            exchange.sendResponseHeaders(200, b.length);
+            try (java.io.OutputStream os = exchange.getResponseBody()) { os.write(b); }
+        });
+        server.createContext("/conv", exchange -> {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { exchange.sendResponseHeaders(204, -1); return; }
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8).trim();
+            ImageMatrix img = ImageMatrix.fromCsvString(body, "conv_task");
+            float[] feats = ConvolutionChunk.process(img, threads);
+            byte[] b = ConvolutionChunk.featuresToString(feats).getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "text/plain");
+            exchange.sendResponseHeaders(200, b.length);
+            try (java.io.OutputStream os = exchange.getResponseBody()) { os.write(b); }
+        });
+        server.createContext("/mlp", exchange -> {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { exchange.sendResponseHeaders(204, -1); return; }
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8).trim();
+            float[] feats = ConvolutionChunk.featuresFromString(body);
+            MlpChunk.Prediction pred = MlpChunk.process(feats);
+            byte[] b = pred.toProtocolString().getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "text/plain");
+            exchange.sendResponseHeaders(200, b.length);
+            try (java.io.OutputStream os = exchange.getResponseBody()) { os.write(b); }
+        });
+        server.createContext("/infer", exchange -> {
+            exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+            if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) { exchange.sendResponseHeaders(204, -1); return; }
+            String body = new String(exchange.getRequestBody().readAllBytes(), StandardCharsets.UTF_8).trim();
+            ImageMatrix img = body.contains(",") ? ImageMatrix.fromCsvString(body, "task") : ImageMatrix.createSample(body);
+            MlpChunk.Prediction pred = CnnInferenceEngine.infer(img);
+            byte[] b = pred.toProtocolString().getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "text/plain");
+            exchange.sendResponseHeaders(200, b.length);
+            try (java.io.OutputStream os = exchange.getResponseBody()) { os.write(b); }
+        });
+        server.start();
+        System.out.println("[JavaWorker-HTTP] Listening on port " + port + " (threads: " + threads + ")...");
+    }
+
+    public static void main(String[] args) throws Exception {
+        if (args.length > 0 && "--http".equalsIgnoreCase(args[0])) {
+            String envPort = System.getenv("PORT");
+            int port = (args.length > 1) ? Integer.parseInt(args[1].replace(":", "")) : (envPort != null ? Integer.parseInt(envPort) : 8085);
+            int threads = (args.length > 2) ? Integer.parseInt(args[2]) : 4;
+            runHttpWorker(port, threads);
+            return;
+        }
+
         String id = (args.length > 0) ? args[0] : "node_java_1";
         String host = (args.length > 1) ? args[1] : "localhost";
         int port = (args.length > 2) ? Integer.parseInt(args[2]) : ProtocolConstants.DEFAULT_WORKER_PORT;

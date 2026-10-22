@@ -349,8 +349,78 @@ pub fn handle_message(line: &str) -> Option<String> {
     }
 }
 
+fn run_http_worker(port: u16, threads: usize) -> std::io::Result<()> {
+    let listener = std::net::TcpListener::bind(format!("0.0.0.0:{}", port))?;
+    println!("[RustWorker-HTTP] Listening on port {} (threads: {})...", port, threads);
+    for stream_res in listener.incoming() {
+        if let Ok(mut stream) = stream_res {
+            let mut reader = BufReader::new(stream.try_clone()?);
+            let mut request_line = String::new();
+            if reader.read_line(&mut request_line).is_err() {
+                continue;
+            }
+            let mut content_length: usize = 0;
+            loop {
+                let mut header = String::new();
+                if reader.read_line(&mut header).is_err() || header.trim().is_empty() {
+                    break;
+                }
+                let lower = header.to_lowercase();
+                if lower.starts_with("content-length:") {
+                    if let Some(val) = header.split(':').nth(1) {
+                        content_length = val.trim().parse().unwrap_or(0);
+                    }
+                }
+            }
+
+            let mut body = vec![0u8; content_length];
+            let _ = std::io::Read::read_exact(&mut reader, &mut body);
+            let body_str = String::from_utf8_lossy(&body).trim().to_string();
+
+            let parts: Vec<&str> = request_line.split_whitespace().collect();
+            let path = parts.get(1).copied().unwrap_or("/");
+
+            let (status, content_type, resp_body) = if path == "/health" {
+                ("200 OK", "application/json", format!("{{\"status\":\"ok\",\"worker\":\"node_rust_cloud\",\"language\":\"Rust\",\"threads\":{}}}\n", threads))
+            } else if path == "/conv" {
+                let r = handle_message(&format!("CONV_REQ|http|{}", body_str)).unwrap_or_default();
+                let payload = r.split('|').nth(2).unwrap_or("").to_string();
+                ("200 OK", "text/plain", payload)
+            } else if path == "/mlp" {
+                let r = handle_message(&format!("MLP_REQ|http|{}", body_str)).unwrap_or_default();
+                let payload = r.split('|').nth(2).unwrap_or("").to_string();
+                ("200 OK", "text/plain", payload)
+            } else if path == "/infer" {
+                let r = handle_message(&format!("INFER_REQ|http|{}", body_str)).unwrap_or_default();
+                let payload = r.split('|').nth(2).unwrap_or("").to_string();
+                ("200 OK", "text/plain", payload)
+            } else {
+                ("404 Not Found", "text/plain", "Not Found\n".to_string())
+            };
+
+            let response = format!(
+                "HTTP/1.1 {}\r\nContent-Type: {}\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: {}\r\nConnection: close\r\n\r\n{}",
+                status, content_type, resp_body.len(), resp_body
+            );
+            let _ = stream.write_all(response.as_bytes());
+            let _ = stream.flush();
+        }
+    }
+    Ok(())
+}
+
 fn main() -> std::io::Result<()> {
     let args: Vec<String> = env::args().collect();
+    if args.get(1).map(|s| s.as_str()) == Some("--http") {
+        let env_port = env::var("PORT").ok().and_then(|p| p.parse().ok());
+        let port: u16 = args.get(2)
+            .and_then(|s| s.trim_start_matches(':').parse().ok())
+            .or(env_port)
+            .unwrap_or(8084);
+        let threads = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(4);
+        return run_http_worker(port, threads);
+    }
+
     let worker_id = args.get(1).map(|s| s.as_str()).unwrap_or("node_rust_1");
     let host = args.get(2).map(|s| s.as_str()).unwrap_or("127.0.0.1");
     let port = args.get(3).and_then(|s| s.parse().ok()).unwrap_or(9010);

@@ -84,7 +84,104 @@ std::string handle_message(const std::string& line) {
     return "UNKNOWN|" + task_id + "|ERR";
 }
 
+void run_http_worker(int port, int threads) {
+    g_thread_count = threads;
+    int server_fd = socket(AF_INET, SOCK_STREAM, 0);
+    int opt = 1;
+    setsockopt(server_fd, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = htons(port);
+    if (bind(server_fd, (struct sockaddr*)&addr, sizeof(addr)) < 0) {
+        std::cerr << "[Worker-CPP-HTTP] Bind failed on port " << port << std::endl;
+        return;
+    }
+    listen(server_fd, 10);
+    std::cout << "[Worker-CPP-HTTP] Listening on port " << port << " (OpenMP threads: " << threads << ")...\n";
+
+    while (true) {
+        sockaddr_in client_addr{};
+        socklen_t client_len = sizeof(client_addr);
+        int client_fd = accept(server_fd, (struct sockaddr*)&client_addr, &client_len);
+        if (client_fd < 0) continue;
+
+        std::string request;
+        char buf[4096];
+        int n;
+        while ((n = read(client_fd, buf, sizeof(buf) - 1)) > 0) {
+            buf[n] = '\0';
+            request.append(buf, n);
+            if (request.find("\r\n\r\n") != std::string::npos) {
+                size_t cl_pos = request.find("Content-Length: ");
+                if (cl_pos == std::string::npos) cl_pos = request.find("content-length: ");
+                if (cl_pos != std::string::npos) {
+                    size_t cl_end = request.find("\r\n", cl_pos);
+                    int content_len = std::stoi(request.substr(cl_pos + 16, cl_end - (cl_pos + 16)));
+                    size_t body_start = request.find("\r\n\r\n") + 4;
+                    while (request.length() - body_start < (size_t)content_len) {
+                        int more = read(client_fd, buf, sizeof(buf) - 1);
+                        if (more <= 0) break;
+                        buf[more] = '\0';
+                        request.append(buf, more);
+                    }
+                }
+                break;
+            }
+        }
+
+        std::string resp_body;
+        std::string content_type = "text/plain";
+        size_t path_start = request.find(' ');
+        size_t path_end = request.find(' ', path_start + 1);
+        std::string path = (path_start != std::string::npos && path_end != std::string::npos)
+                         ? request.substr(path_start + 1, path_end - path_start - 1) : "/";
+        size_t body_start = request.find("\r\n\r\n");
+        std::string body = (body_start != std::string::npos) ? request.substr(body_start + 4) : "";
+
+        if (path == "/health") {
+            content_type = "application/json";
+            resp_body = "{\"status\":\"ok\",\"worker\":\"node_cpp_cloud\",\"language\":\"C++\",\"threads\":" + std::to_string(threads) + "}\n";
+        } else if (path == "/conv") {
+            std::string msg = "CONV_REQ|http|" + body;
+            std::string r = handle_message(msg);
+            size_t p = r.rfind('|');
+            resp_body = (p != std::string::npos) ? r.substr(p + 1) : "";
+        } else if (path == "/mlp") {
+            std::string msg = "MLP_REQ|http|" + body;
+            std::string r = handle_message(msg);
+            size_t p = r.rfind('|');
+            resp_body = (p != std::string::npos) ? r.substr(p + 1) : "";
+        } else if (path == "/infer") {
+            std::string msg = "INFER_REQ|http|" + body;
+            std::string r = handle_message(msg);
+            size_t p = r.rfind('|');
+            resp_body = (p != std::string::npos) ? r.substr(p + 1) : "";
+        }
+
+        std::string response = "HTTP/1.1 200 OK\r\nContent-Type: " + content_type +
+                               "\r\nAccess-Control-Allow-Origin: *\r\nContent-Length: " +
+                               std::to_string(resp_body.size()) + "\r\nConnection: close\r\n\r\n" + resp_body;
+        write(client_fd, response.c_str(), response.size());
+        close(client_fd);
+    }
+}
+
 int main(int argc, char* argv[]) {
+    if (argc > 1 && std::string(argv[1]) == "--http") {
+        int h_port = 8083;
+        char* env_p = std::getenv("PORT");
+        if (env_p) h_port = std::stoi(env_p);
+        if (argc > 2) {
+            std::string p_arg = argv[2];
+            if (p_arg[0] == ':') p_arg = p_arg.substr(1);
+            if (!p_arg.empty() && std::isdigit(p_arg[0])) h_port = std::stoi(p_arg);
+        }
+        int h_threads = (argc > 3) ? std::stoi(argv[3]) : 4;
+        run_http_worker(h_port, h_threads);
+        return 0;
+    }
+
     std::string worker_id = (argc > 1) ? argv[1] : "node_cpp_1";
     std::string host = (argc > 2) ? argv[2] : "127.0.0.1";
     int port = (argc > 3) ? std::stoi(argv[3]) : 9010;

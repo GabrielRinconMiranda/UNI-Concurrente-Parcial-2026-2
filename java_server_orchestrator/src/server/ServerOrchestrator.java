@@ -324,6 +324,8 @@ public class ServerOrchestrator {
             httpServer.createContext("/infer", this::handleHttpInfer);
             httpServer.createContext("/mode", this::handleHttpMode);
             httpServer.createContext("/register_cloud_worker", this::handleHttpRegisterCloudWorker);
+            httpServer.createContext("/dataset/image", this::handleHttpDatasetImage);
+            httpServer.createContext("/dataset/samples", this::handleHttpDatasetSamples);
             httpServer.createContext("/", this::handleHttpRoot);
             httpServer.setExecutor(localThreadPool);
             httpServer.start();
@@ -573,31 +575,102 @@ public class ServerOrchestrator {
     }
 
     private void handleHttpInfer(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, POST, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
         if (!"POST".equalsIgnoreCase(exchange.getRequestMethod())) {
             exchange.sendResponseHeaders(405, -1);
             return;
         }
-        String body;
-        try (InputStream is = exchange.getRequestBody()) {
-            body = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+        try {
+            String body;
+            try (InputStream is = exchange.getRequestBody()) {
+                body = new String(is.readAllBytes(), StandardCharsets.UTF_8).trim();
+            }
+            ImageMatrix img;
+            if (body.contains(",")) {
+                img = ImageMatrix.fromCsvString(body, "custom");
+            } else {
+                img = getSampleImage(body.isEmpty() ? "panda" : body);
+            }
+            InferenceResponse resp = processInference(img);
+            String json = String.format(Locale.US,
+                    "{\"label\":\"%s\",\"confidence\":%.2f,\"mode\":\"%s\",\"latency_ms\":%.2f,\"handler\":\"%s\"}\n",
+                    resp.label, resp.confidence * 100.0f, resp.modeUsed.name(), resp.latencyMs, resp.handlerInfo.replace("\"", "\\\""));
+            byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+        } catch (Exception e) {
+            String errJson = String.format(Locale.US,
+                    "{\"label\":\"error\",\"confidence\":0.0,\"mode\":\"ERROR\",\"latency_ms\":0.0,\"handler\":\"%s\"}\n",
+                    e.getMessage() != null ? e.getMessage().replace("\"", "'") : "Unknown execution error");
+            byte[] bytes = errJson.getBytes(StandardCharsets.UTF_8);
+            exchange.getResponseHeaders().set("Content-Type", "application/json");
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
         }
-        ImageMatrix img;
-        if (body.contains(",")) {
-            img = ImageMatrix.fromCsvString(body, "custom");
-        } else {
-            img = getSampleImage(body.isEmpty() ? "panda" : body);
+    }
+
+    private void handleHttpDatasetSamples(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
         }
-        InferenceResponse resp = processInference(img);
-        String json = String.format(Locale.US,
-                "{\"label\":\"%s\",\"confidence\":%.2f,\"mode\":\"%s\",\"latency_ms\":%.2f,\"handler\":\"%s\"}\n",
-                resp.label, resp.confidence * 100.0f, resp.modeUsed.name(), resp.latencyMs, resp.handlerInfo.replace("\"", "\\\""));
+        String json = "{\"classes\":[\"panda\",\"dog\",\"cat\",\"lion\",\"bear\"]}\n";
         byte[] bytes = json.getBytes(StandardCharsets.UTF_8);
         exchange.getResponseHeaders().set("Content-Type", "application/json");
-        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
         exchange.sendResponseHeaders(200, bytes.length);
         try (OutputStream os = exchange.getResponseBody()) {
             os.write(bytes);
         }
+    }
+
+    private void handleHttpDatasetImage(HttpExchange exchange) throws IOException {
+        exchange.getResponseHeaders().set("Access-Control-Allow-Origin", "*");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Methods", "GET, OPTIONS");
+        exchange.getResponseHeaders().set("Access-Control-Allow-Headers", "*");
+        if ("OPTIONS".equalsIgnoreCase(exchange.getRequestMethod())) {
+            exchange.sendResponseHeaders(204, -1);
+            return;
+        }
+        String query = exchange.getRequestURI().getQuery();
+        String className = "panda";
+        if (query != null && query.contains("class=")) {
+            for (String param : query.split("&")) {
+                if (param.startsWith("class=")) {
+                    className = param.substring(6).toLowerCase().trim();
+                    break;
+                }
+            }
+        }
+        File dir = new File("dataset/real/test/" + className);
+        if (!dir.exists()) dir = new File("../dataset/real/test/" + className);
+        File[] photos = (dir.exists() && dir.isDirectory())
+                ? dir.listFiles((d, n) -> n.toLowerCase().endsWith(".jpg") || n.toLowerCase().endsWith(".jpeg"))
+                : null;
+        if (photos != null && photos.length > 0) {
+            Arrays.sort(photos, Comparator.comparing(File::getName));
+            byte[] bytes = java.nio.file.Files.readAllBytes(photos[0].toPath());
+            exchange.getResponseHeaders().set("Content-Type", "image/jpeg");
+            exchange.sendResponseHeaders(200, bytes.length);
+            try (OutputStream os = exchange.getResponseBody()) {
+                os.write(bytes);
+            }
+            return;
+        }
+        exchange.sendResponseHeaders(404, -1);
     }
 
     private void handleHttpRoot(HttpExchange exchange) throws IOException {

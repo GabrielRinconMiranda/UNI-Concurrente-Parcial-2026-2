@@ -1,0 +1,15 @@
+# Dockerfile para Cubo de Cómputo Java en Render
+FROM eclipse-temurin:17-jdk-alpine AS builder
+WORKDIR /app
+COPY java_server_orchestrator /app/java_server_orchestrator
+COPY dataset /app/dataset
+RUN cd /app/java_server_orchestrator && mkdir -p bin && javac -d bin $(find src -name "*.java")
+
+FROM eclipse-temurin:17-jre-alpine
+WORKDIR /app
+COPY --from=builder /app/java_server_orchestrator/bin /app/bin
+COPY --from=builder /app/dataset /app/dataset
+ENV PORT=8080
+EXPOSE 8080
+CMD ["sh", "-c", "java -cp bin worker.JavaWorkerCube --http ${PORT:-8080} 4"]
+
